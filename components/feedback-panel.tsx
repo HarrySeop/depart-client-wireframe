@@ -21,17 +21,40 @@ interface FeedbackPanelProps {
   onAddComment: (content: string, parentId?: string) => void
   isReadOnly?: boolean
   feedbackInputRef?: React.RefObject<HTMLTextAreaElement | null>
+  pendingIds?: Set<string>
+  wrapPending?: boolean
+}
+
+function groupByPending(
+  items: FeedbackComment[],
+  pendingIds: Set<string>
+): { isPending: boolean; items: FeedbackComment[] }[] {
+  const groups: { isPending: boolean; items: FeedbackComment[] }[] = []
+  for (const item of items) {
+    const pending = pendingIds.has(item.id)
+    const last = groups[groups.length - 1]
+    if (last && last.isPending === pending) {
+      last.items.push(item)
+    } else {
+      groups.push({ isPending: pending, items: [item] })
+    }
+  }
+  return groups
 }
 
 function CommentBlock({
   comment,
   isReply = false,
   isReadOnly = false,
+  isPending = false,
+  isGrouped = false,
   onReply,
 }: {
   comment: FeedbackComment
   isReply?: boolean
   isReadOnly?: boolean
+  isPending?: boolean
+  isGrouped?: boolean
   onReply?: (parentId: string) => void
 }) {
   const isClient = comment.authorType === "client"
@@ -39,9 +62,11 @@ function CommentBlock({
   return (
     <div
       className={cn(
-        "border border-border rounded-lg",
-        isReply && "ml-6",
-        isClient ? "bg-blue-500/5" : "bg-card"
+        "rounded-lg",
+        isReply && !isGrouped && "ml-6",
+        isPending
+          ? "border border-dashed border-amber-500/40 bg-amber-50 dark:bg-amber-950/20"
+          : cn("border border-border", isClient ? "bg-blue-500/5" : "bg-card")
       )}
     >
       {/* Comment header */}
@@ -57,6 +82,11 @@ function CommentBlock({
           >
             {isClient ? "클라이언트" : "빌더"}
           </span>
+          {isPending && (
+            <span className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
+              전달 대기
+            </span>
+          )}
           <span className="text-sm font-medium">{comment.author}</span>
         </div>
         <span className="text-xs text-muted-foreground">
@@ -90,6 +120,8 @@ export function FeedbackPanel({
   onAddComment,
   isReadOnly = false,
   feedbackInputRef,
+  pendingIds,
+  wrapPending = false,
 }: FeedbackPanelProps) {
   const [newComment, setNewComment] = React.useState("")
   const [replyingTo, setReplyingTo] = React.useState<string | null>(null)
@@ -117,15 +149,22 @@ export function FeedbackPanel({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <h3 className="font-medium text-sm">
-          피드백
-          {comments.length > 0 && (
-            <span className="ml-1.5 text-xs text-muted-foreground">
-              ({comments.length})
-            </span>
-          )}
-        </h3>
+      <div className="px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium text-sm">
+            피드백
+            {comments.length > 0 && (
+              <span className="ml-1.5 text-xs text-muted-foreground">
+                ({comments.length})
+              </span>
+            )}
+          </h3>
+        </div>
+        {pendingIds && (
+          <p className="text-xs text-muted-foreground mt-1">
+            작성한 피드백은 '수정완료' 시 빌더에게 전달됩니다.
+          </p>
+        )}
       </div>
 
       <ScrollArea className="flex-1 min-h-0 overflow-y">
@@ -135,26 +174,43 @@ export function FeedbackPanel({
               아직 피드백이 없습니다.
             </p>
           )}
-          {comments.map((comment) => (
-            <div key={comment.id} className="space-y-2">
-              <CommentBlock
-                comment={comment}
-                isReadOnly={isReadOnly}
-                onReply={(id) => setReplyingTo(id)}
-              />
-
-              {/* Replies */}
-              {comment.replies?.map((reply) => (
+          {(() => {
+            // 답글 렌더 (D안: 개별 isPending, E안: wrapper 그룹핑)
+            const renderReplies = (comment: FeedbackComment) => {
+              if (!comment.replies || comment.replies.length === 0) return null
+              if (wrapPending && pendingIds) {
+                return groupByPending(comment.replies, pendingIds).map((rGroup, ri) =>
+                  rGroup.isPending ? (
+                    <div key={`rg-${comment.id}-${ri}`} className="ml-6 border border-dashed border-muted-foreground/30 bg-muted/50 rounded-lg p-2 space-y-2">
+                      <span className="text-[11px] font-medium text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded border border-border mb-2 inline-block">전달 대기</span>
+                      {rGroup.items.map((reply) => (
+                        <CommentBlock key={reply.id} comment={reply} isReply isGrouped isReadOnly={isReadOnly} />
+                      ))}
+                    </div>
+                  ) : (
+                    <React.Fragment key={`rg-${comment.id}-${ri}`}>
+                      {rGroup.items.map((reply) => (
+                        <CommentBlock key={reply.id} comment={reply} isReply isReadOnly={isReadOnly} />
+                      ))}
+                    </React.Fragment>
+                  )
+                )
+              }
+              return comment.replies.map((reply) => (
                 <CommentBlock
                   key={reply.id}
                   comment={reply}
                   isReply
                   isReadOnly={isReadOnly}
+                  isPending={pendingIds?.has(reply.id)}
                 />
-              ))}
+              ))
+            }
 
-              {/* Reply input */}
-              {replyingTo === comment.id && (
+            // 답글 입력 UI
+            const renderReplyInput = (comment: FeedbackComment) => {
+              if (replyingTo !== comment.id) return null
+              return (
                 <div className="ml-6 space-y-2">
                   <Textarea
                     value={replyContent}
@@ -188,9 +244,51 @@ export function FeedbackPanel({
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+              )
+            }
+
+            // E안: wrapper 그룹핑
+            if (wrapPending && pendingIds) {
+              return groupByPending(comments, pendingIds).map((group, gi) =>
+                group.isPending ? (
+                  <div key={`pg-${gi}`} className="border border-dashed border-muted-foreground/30 bg-muted/50 rounded-lg p-3 space-y-3">
+                    <span className="text-[11px] font-medium text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded border border-border mb-2 inline-block">전달 대기</span>
+                    {group.items.map((comment) => (
+                      <div key={comment.id} className="space-y-2">
+                        <CommentBlock comment={comment} isReadOnly={isReadOnly} onReply={(id) => setReplyingTo(id)} />
+                        {renderReplies(comment)}
+                        {renderReplyInput(comment)}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <React.Fragment key={`pg-${gi}`}>
+                    {group.items.map((comment) => (
+                      <div key={comment.id} className="space-y-2">
+                        <CommentBlock comment={comment} isReadOnly={isReadOnly} onReply={(id) => setReplyingTo(id)} />
+                        {renderReplies(comment)}
+                        {renderReplyInput(comment)}
+                      </div>
+                    ))}
+                  </React.Fragment>
+                )
+              )
+            }
+
+            // D안 / 기본: 개별 isPending
+            return comments.map((comment) => (
+              <div key={comment.id} className="space-y-2">
+                <CommentBlock
+                  comment={comment}
+                  isReadOnly={isReadOnly}
+                  isPending={pendingIds?.has(comment.id)}
+                  onReply={(id) => setReplyingTo(id)}
+                />
+                {renderReplies(comment)}
+                {renderReplyInput(comment)}
+              </div>
+            ))
+          })()}
           <div ref={scrollEndRef} />
         </div>
       </ScrollArea>

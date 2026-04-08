@@ -30,6 +30,7 @@ interface PlanningData {
 interface PlanningContentProps {
   data: PlanningData
   isEditMode: boolean
+  captionEditMode?: "A" | "B" | "C" | "D" | "E"
   onDataChange?: (data: PlanningData) => void
   onImageClick?: (images: { src: string; alt: string }[], index: number) => void
 }
@@ -97,9 +98,341 @@ function TrackedText({
   )
 }
 
+// --- C안 Helper Functions ---
+
+function escapeHTML(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/\n/g, "<br>")
+}
+
+function buildDiffHTML(original: string, edited: string): string {
+  if (!edited || original === edited) {
+    return escapeHTML(original)
+  }
+
+  let prefixEnd = 0
+  while (
+    prefixEnd < original.length &&
+    prefixEnd < edited.length &&
+    original[prefixEnd] === edited[prefixEnd]
+  ) {
+    prefixEnd++
+  }
+
+  let suffixStart = 0
+  while (
+    suffixStart < original.length - prefixEnd &&
+    suffixStart < edited.length - prefixEnd &&
+    original[original.length - 1 - suffixStart] ===
+      edited[edited.length - 1 - suffixStart]
+  ) {
+    suffixStart++
+  }
+
+  const prefix = original.slice(0, prefixEnd)
+  const deletedPart = original.slice(prefixEnd, original.length - suffixStart)
+  const insertedPart = edited.slice(prefixEnd, edited.length - suffixStart)
+  const suffix = original.slice(original.length - suffixStart)
+
+  let html = ""
+  if (prefix) html += escapeHTML(prefix)
+  if (deletedPart) {
+    html += `<span contenteditable="false" data-diff="deleted" class="font-bold line-through" style="color:#dd3d2e;user-select:none;-webkit-user-select:none;pointer-events:none;" aria-label="삭제된 텍스트" role="deletion">${escapeHTML(deletedPart)}</span>`
+  }
+  if (insertedPart) {
+    html += `<span data-diff="inserted" class="font-bold underline" style="color:#dd3d2e;" role="insertion">${escapeHTML(insertedPart)}</span>`
+  }
+  if (suffix) html += escapeHTML(suffix)
+  return html
+}
+
+function extractEditedText(container: HTMLDivElement): string {
+  let text = ""
+  for (const node of container.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      text += node.textContent ?? ""
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement
+      if (el.dataset.diff === "deleted") continue
+      if (el.tagName === "BR") {
+        text += "\n"
+        continue
+      }
+      // Handle nested <br> inside inserted spans
+      if (el.dataset.diff === "inserted") {
+        for (const child of el.childNodes) {
+          if (child.nodeType === Node.TEXT_NODE) {
+            text += child.textContent ?? ""
+          } else if (
+            child.nodeType === Node.ELEMENT_NODE &&
+            (child as HTMLElement).tagName === "BR"
+          ) {
+            text += "\n"
+          }
+        }
+        continue
+      }
+      text += el.textContent ?? ""
+    }
+  }
+  return text
+}
+
+function isInsideDeleted(node: Node): boolean {
+  let current: Node | null = node
+  while (current) {
+    if (
+      current.nodeType === Node.ELEMENT_NODE &&
+      (current as HTMLElement).dataset?.diff === "deleted"
+    ) {
+      return true
+    }
+    current = current.parentNode
+  }
+  return false
+}
+
+function saveCursorPosition(container: HTMLDivElement): number | null {
+  const sel = window.getSelection()
+  if (!sel || sel.rangeCount === 0) return null
+
+  const range = sel.getRangeAt(0)
+
+  // Check if cursor is within our container
+  if (!container.contains(range.startContainer)) return null
+
+  const walker = document.createTreeWalker(
+    container,
+    NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+    {
+      acceptNode(node) {
+        if (isInsideDeleted(node)) return NodeFilter.FILTER_REJECT
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if ((node as HTMLElement).tagName === "BR") return NodeFilter.FILTER_ACCEPT
+          return NodeFilter.FILTER_SKIP
+        }
+        return NodeFilter.FILTER_ACCEPT
+      },
+    }
+  )
+
+  let offset = 0
+  let currentNode: Node | null
+  while ((currentNode = walker.nextNode())) {
+    if (currentNode === range.startContainer) {
+      offset += range.startOffset
+      return offset
+    }
+    // If the cursor's container is the parent of this BR
+    if (
+      currentNode.nodeType === Node.ELEMENT_NODE &&
+      (currentNode as HTMLElement).tagName === "BR"
+    ) {
+      // Check if this BR is at the cursor position
+      if (
+        range.startContainer === currentNode.parentNode &&
+        Array.from(currentNode.parentNode!.childNodes).indexOf(
+          currentNode as ChildNode
+        ) < range.startOffset
+      ) {
+        offset += 1
+        continue
+      }
+      offset += 1
+      continue
+    }
+    offset += currentNode.textContent?.length ?? 0
+  }
+
+  return offset
+}
+
+function restoreCursorPosition(
+  container: HTMLDivElement,
+  targetOffset: number
+): void {
+  const sel = window.getSelection()
+  if (!sel) return
+
+  const walker = document.createTreeWalker(
+    container,
+    NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+    {
+      acceptNode(node) {
+        if (isInsideDeleted(node)) return NodeFilter.FILTER_REJECT
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if ((node as HTMLElement).tagName === "BR") return NodeFilter.FILTER_ACCEPT
+          return NodeFilter.FILTER_SKIP
+        }
+        return NodeFilter.FILTER_ACCEPT
+      },
+    }
+  )
+
+  let remaining = targetOffset
+  let currentNode: Node | null
+  while ((currentNode = walker.nextNode())) {
+    if (
+      currentNode.nodeType === Node.ELEMENT_NODE &&
+      (currentNode as HTMLElement).tagName === "BR"
+    ) {
+      if (remaining <= 1) {
+        // Place cursor after this BR
+        const range = document.createRange()
+        const parent = currentNode.parentNode!
+        const idx =
+          Array.from(parent.childNodes).indexOf(currentNode as ChildNode) + 1
+        range.setStart(parent, idx)
+        range.collapse(true)
+        sel.removeAllRanges()
+        sel.addRange(range)
+        return
+      }
+      remaining -= 1
+      continue
+    }
+    const len = currentNode.textContent?.length ?? 0
+    if (remaining <= len) {
+      const range = document.createRange()
+      range.setStart(currentNode, remaining)
+      range.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(range)
+      return
+    }
+    remaining -= len
+  }
+
+  // Fallback: place cursor at end
+  const range = document.createRange()
+  range.selectNodeContents(container)
+  range.collapse(false)
+  sel.removeAllRanges()
+  sel.addRange(range)
+}
+
+// --- C안 Component ---
+
+function ContentEditableCaption({
+  caption,
+  onUpdate,
+}: {
+  caption: CaptionData
+  onUpdate: (id: string, value: string) => void
+}) {
+  const divRef = React.useRef<HTMLDivElement>(null)
+  const isComposingRef = React.useRef(false)
+  const lastEditedRef = React.useRef(caption.edited ?? caption.original)
+  const cursorOffsetRef = React.useRef<number | null>(null)
+  const isMountedRef = React.useRef(false)
+
+  // Initialize innerHTML on mount
+  React.useEffect(() => {
+    if (!divRef.current) return
+    const edited = caption.edited ?? caption.original
+    divRef.current.innerHTML = buildDiffHTML(caption.original, edited)
+    lastEditedRef.current = edited
+    isMountedRef.current = true
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync when caption.edited changes from OUTSIDE (e.g., reset/cancel)
+  React.useEffect(() => {
+    if (!isMountedRef.current) return
+    const edited = caption.edited ?? caption.original
+    if (edited === lastEditedRef.current) return
+    if (!divRef.current) return
+
+    const savedOffset = cursorOffsetRef.current
+    divRef.current.innerHTML = buildDiffHTML(caption.original, edited)
+    lastEditedRef.current = edited
+
+    if (savedOffset !== null && document.activeElement === divRef.current) {
+      restoreCursorPosition(divRef.current, savedOffset)
+    }
+  }, [caption.edited, caption.original])
+
+  const processInput = React.useCallback(() => {
+    if (isComposingRef.current) return
+    if (!divRef.current) return
+
+    const newText = extractEditedText(divRef.current)
+    const cursorOffset = saveCursorPosition(divRef.current)
+
+    // Always rebuild DOM synchronously to fix structural issues
+    // (e.g. browser removing contentEditable="false" deleted spans on Backspace)
+    divRef.current.innerHTML = buildDiffHTML(caption.original, newText)
+
+    // Restore cursor synchronously — no rAF delay
+    if (cursorOffset !== null && document.activeElement === divRef.current) {
+      restoreCursorPosition(divRef.current, cursorOffset)
+    }
+
+    // Only notify parent if text actually changed
+    if (newText !== lastEditedRef.current) {
+      lastEditedRef.current = newText
+      onUpdate(caption.id, newText)
+    }
+  }, [caption.id, caption.original, onUpdate])
+
+  const handleInput = React.useCallback(() => {
+    processInput()
+  }, [processInput])
+
+  const handleCompositionStart = React.useCallback(() => {
+    isComposingRef.current = true
+  }, [])
+
+  const handleCompositionEnd = React.useCallback(() => {
+    isComposingRef.current = false
+    processInput()
+  }, [processInput])
+
+  const handleKeyDown = React.useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault()
+        document.execCommand("insertLineBreak")
+      }
+    },
+    []
+  )
+
+  const handlePaste = React.useCallback(
+    (e: React.ClipboardEvent) => {
+      e.preventDefault()
+      const text = e.clipboardData.getData("text/plain")
+      document.execCommand("insertText", false, text)
+    },
+    []
+  )
+
+  return (
+    <div
+      ref={divRef}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      aria-multiline="true"
+      aria-label={`${caption.label} 편집`}
+      onInput={handleInput}
+      onCompositionStart={handleCompositionStart}
+      onCompositionEnd={handleCompositionEnd}
+      onKeyDown={handleKeyDown}
+      onPaste={handlePaste}
+      className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap break-words min-h-[60px] outline-none focus-visible:ring-[3px] focus-visible:border-ring focus-visible:ring-ring/50 transition-[color,box-shadow]"
+      data-placeholder="수정할 내용을 입력하세요..."
+    />
+  )
+}
+
 export function PlanningContent({
   data,
   isEditMode,
+  captionEditMode = "A",
   onDataChange,
   onImageClick,
 }: PlanningContentProps) {
@@ -174,22 +507,92 @@ export function PlanningContent({
               {caption.label}
             </h3>
             {isEditMode ? (
-              <div className="space-y-2">
-                {/* Real-time inline diff preview */}
-                <div className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50">
-                  <TrackedText
-                    original={caption.original}
-                    edited={caption.edited ?? caption.original}
+              captionEditMode === "C" ? (
+                /* C안: contentEditable 인라인 diff 에디터 */
+                <ContentEditableCaption
+                  caption={caption}
+                  onUpdate={updateCaption}
+                />
+              ) : captionEditMode === "B" ? (
+                /* B안: 편집 영역 자체가 미리보기 — transparent textarea overlay */
+                <div className="relative min-h-[60px]">
+                  {/* Visual layer: styled diff */}
+                  <div
+                    className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap break-words min-h-[60px]"
+                    aria-hidden="true"
+                  >
+                    <TrackedText
+                      original={caption.original}
+                      edited={caption.edited ?? caption.original}
+                    />
+                  </div>
+                  {/* Interactive layer: transparent textarea */}
+                  <textarea
+                    value={caption.edited ?? caption.original}
+                    onChange={(e) => updateCaption(caption.id, e.target.value)}
+                    className="absolute inset-0 w-full h-full text-sm leading-relaxed p-3 rounded-md bg-transparent resize-none outline-none border border-transparent focus:border-ring focus:ring-ring/50 focus:ring-[3px]"
+                    style={{
+                      color: "transparent",
+                      caretColor: "var(--foreground)",
+                    }}
+                    placeholder="수정할 내용을 입력하세요..."
                   />
                 </div>
-                {/* Edit textarea */}
-                <Textarea
-                  value={caption.edited ?? caption.original}
-                  onChange={(e) => updateCaption(caption.id, e.target.value)}
-                  className="min-h-[60px] text-sm resize-none"
-                  placeholder="수정할 내용을 입력하세요..."
-                />
-              </div>
+              ) : captionEditMode === "D" ? (
+                /* D안(피드백 변경): A안과 동일한 미리보기 + Textarea 2단 구조 */
+                <div className="space-y-2">
+                  {/* Real-time inline diff preview */}
+                  <div className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50">
+                    <TrackedText
+                      original={caption.original}
+                      edited={caption.edited ?? caption.original}
+                    />
+                  </div>
+                  {/* Edit textarea */}
+                  <Textarea
+                    value={caption.edited ?? caption.original}
+                    onChange={(e) => updateCaption(caption.id, e.target.value)}
+                    className="min-h-[60px] text-sm resize-none"
+                    placeholder="수정할 내용을 입력하세요..."
+                  />
+                </div>
+              ) : captionEditMode === "E" ? (
+                /* E안(테스트): D안과 동일한 미리보기 + Textarea 2단 구조 */
+                <div className="space-y-2">
+                  {/* Real-time inline diff preview */}
+                  <div className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50">
+                    <TrackedText
+                      original={caption.original}
+                      edited={caption.edited ?? caption.original}
+                    />
+                  </div>
+                  {/* Edit textarea */}
+                  <Textarea
+                    value={caption.edited ?? caption.original}
+                    onChange={(e) => updateCaption(caption.id, e.target.value)}
+                    className="min-h-[60px] text-sm resize-none"
+                    placeholder="수정할 내용을 입력하세요..."
+                  />
+                </div>
+              ) : (
+                /* A안(기존): 미리보기 + Textarea 2단 구조 */
+                <div className="space-y-2">
+                  {/* Real-time inline diff preview */}
+                  <div className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50">
+                    <TrackedText
+                      original={caption.original}
+                      edited={caption.edited ?? caption.original}
+                    />
+                  </div>
+                  {/* Edit textarea */}
+                  <Textarea
+                    value={caption.edited ?? caption.original}
+                    onChange={(e) => updateCaption(caption.id, e.target.value)}
+                    className="min-h-[60px] text-sm resize-none"
+                    placeholder="수정할 내용을 입력하세요..."
+                  />
+                </div>
+              )
             ) : (
               <p className="text-sm leading-relaxed">
                 {caption.edited && caption.edited !== caption.original ? (

@@ -87,4 +87,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  [data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: var(--muted-foreground);
+    pointer-events: none;
+  }
 }

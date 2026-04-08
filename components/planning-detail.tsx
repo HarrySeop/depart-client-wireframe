@@ -17,6 +17,13 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -62,12 +69,38 @@ export function PlanningDetail({ id }: { id: string }) {
   const [editedData, setEditedData] = React.useState(initialPlanningData)
   const [feedback, setFeedback] = React.useState(initialFeedback)
   const [mobileTab, setMobileTab] = React.useState("planning")
+  const [captionEditMode, setCaptionEditMode] = React.useState<"A" | "B" | "C" | "D" | "E">("A")
 
   // Derived state for unsaved changes
   const initialFeedbackRef = React.useRef(initialFeedback)
   const hasNewFeedback = feedback.length > initialFeedbackRef.current.length
   const hasEditChanges = JSON.stringify(editedData) !== JSON.stringify(planningData)
   const hasUnsavedChanges = hasNewFeedback || hasEditChanges
+
+  // Pending (unsent) feedback IDs for D안
+  const initialCommentIds = React.useMemo(() => {
+    const ids = new Set<string>()
+    const collect = (comments: FeedbackComment[]) => {
+      for (const c of comments) {
+        ids.add(c.id)
+        if (c.replies) collect(c.replies)
+      }
+    }
+    collect(initialFeedbackRef.current)
+    return ids
+  }, [])
+
+  const pendingIds = React.useMemo(() => {
+    const pending = new Set<string>()
+    const check = (comments: FeedbackComment[]) => {
+      for (const c of comments) {
+        if (!initialCommentIds.has(c.id)) pending.add(c.id)
+        if (c.replies) check(c.replies)
+      }
+    }
+    check(feedback)
+    return pending
+  }, [feedback, initialCommentIds])
 
   // Modals
   const [approveModalOpen, setApproveModalOpen] = React.useState(false)
@@ -117,7 +150,6 @@ export function PlanningDetail({ id }: { id: string }) {
     setPlanningData(editedData)
     setRevisionModalOpen(false)
     setIsEditMode(false)
-    setMobileEditDrawerOpen(false)
     setStatus("컨펌 보류")
     toast.success("피드백이 빌더에게 전달되었습니다. 해당 기획은 다음 스프린트로 이월됩니다.")
   }
@@ -247,6 +279,18 @@ export function PlanningDetail({ id }: { id: string }) {
             </>
           ) : (
             <>
+              <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B" | "C" | "D" | "E")}>
+                <SelectTrigger size="sm" className="w-[80px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">A안(기존)</SelectItem>
+                  <SelectItem value="B">B안(폼수정)</SelectItem>
+                  <SelectItem value="C">C안(테스트)</SelectItem>
+                  <SelectItem value="D">D안(피드백 변경)</SelectItem>
+                  <SelectItem value="E">E안(테스트)</SelectItem>
+                </SelectContent>
+              </Select>
               <Button variant="outline" size="sm" onClick={handleCancel}>
                 <X className="size-4 mr-1.5" />
                 취소
@@ -270,6 +314,7 @@ export function PlanningDetail({ id }: { id: string }) {
                 <PlanningContent
                   data={editedData}
                   isEditMode={true}
+                  captionEditMode={captionEditMode}
                   onDataChange={setEditedData}
                   onImageClick={openImageViewer}
                 />
@@ -280,6 +325,8 @@ export function PlanningDetail({ id }: { id: string }) {
                   onAddComment={handleAddComment}
                   isReadOnly={false}
                   feedbackInputRef={feedbackInputRef}
+                  pendingIds={captionEditMode === "D" || captionEditMode === "E" ? pendingIds : undefined}
+                  wrapPending={captionEditMode === "E"}
                 />
               </div>
             </>
@@ -331,6 +378,7 @@ export function PlanningDetail({ id }: { id: string }) {
                 <PlanningContent
                   data={editedData}
                   isEditMode={true}
+                  captionEditMode={captionEditMode}
                   onDataChange={setEditedData}
                   onImageClick={openImageViewer}
                 />
@@ -341,6 +389,8 @@ export function PlanningDetail({ id }: { id: string }) {
                   onAddComment={handleAddComment}
                   isReadOnly={false}
                   feedbackInputRef={feedbackInputRef}
+                  pendingIds={captionEditMode === "D" || captionEditMode === "E" ? pendingIds : undefined}
+                  wrapPending={captionEditMode === "E"}
                 />
               </TabsContent>
             </Tabs>
@@ -419,6 +469,18 @@ export function PlanningDetail({ id }: { id: string }) {
                 </>
               ) : (
                 <>
+                  <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B" | "C" | "D" | "E")}>
+                    <SelectTrigger size="sm" className="w-[80px] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A">A안(기존)</SelectItem>
+                      <SelectItem value="B">B안(폼수정)</SelectItem>
+                      <SelectItem value="C">C안(테스트)</SelectItem>
+                      <SelectItem value="D">D안(피드백 변경)</SelectItem>
+                  <SelectItem value="E">E안(테스트)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button
                     variant="outline"
                     size="sm"
