@@ -2,17 +2,6 @@
 
 import * as React from "react"
 import { Check, Pencil, X } from "lucide-react"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -40,19 +29,17 @@ import {
   DrawerFooter,
   DrawerClose,
 } from "@/components/ui/drawer"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { StatusBadge, type StatusType } from "./status-badge"
-import { PlanningContent, type PlanningData } from "./planning-content"
-import { FeedbackPanel, type FeedbackComment } from "./feedback-panel"
+import { PlanningContent } from "./planning-content"
 import { ImageViewer } from "./image-viewer"
 import { useIsMobile } from "@/components/ui/use-mobile"
 import { getPlanningDetailById } from "@/lib/mock-data"
 
 export function PlanningDetail({ id }: { id: string }) {
   const isMobile = useIsMobile()
-  const feedbackInputRef = React.useRef<HTMLTextAreaElement>(null)
 
-  const { data: initialPlanningData, feedback: initialFeedback } = React.useMemo(
+
+  const { data: initialPlanningData } = React.useMemo(
     () => getPlanningDetailById(id),
     [id]
   )
@@ -62,40 +49,11 @@ export function PlanningDetail({ id }: { id: string }) {
   const [isEditMode, setIsEditMode] = React.useState(false)
   const [planningData, setPlanningData] = React.useState(initialPlanningData)
   const [editedData, setEditedData] = React.useState(initialPlanningData)
-  const [feedback, setFeedback] = React.useState(initialFeedback)
-  const [mobileTab, setMobileTab] = React.useState("planning")
-  const [captionEditMode, setCaptionEditMode] = React.useState<"A" | "B" | "C" | "D" | "E">("A")
+  const [captionEditMode, setCaptionEditMode] = React.useState<"A" | "B">("A")
 
   // Derived state for unsaved changes
-  const initialFeedbackRef = React.useRef(initialFeedback)
-  const hasNewFeedback = feedback.length > initialFeedbackRef.current.length
   const hasEditChanges = JSON.stringify(editedData) !== JSON.stringify(planningData)
-  const hasUnsavedChanges = hasNewFeedback || hasEditChanges
-
-  // Pending (unsent) feedback IDs for D안
-  const initialCommentIds = React.useMemo(() => {
-    const ids = new Set<string>()
-    const collect = (comments: FeedbackComment[]) => {
-      for (const c of comments) {
-        ids.add(c.id)
-        if (c.replies) collect(c.replies)
-      }
-    }
-    collect(initialFeedbackRef.current)
-    return ids
-  }, [])
-
-  const pendingIds = React.useMemo(() => {
-    const pending = new Set<string>()
-    const check = (comments: FeedbackComment[]) => {
-      for (const c of comments) {
-        if (!initialCommentIds.has(c.id)) pending.add(c.id)
-        if (c.replies) check(c.replies)
-      }
-    }
-    check(feedback)
-    return pending
-  }, [feedback, initialCommentIds])
+  const hasUnsavedChanges = hasEditChanges
 
   // Modals
   const [approveModalOpen, setApproveModalOpen] = React.useState(false)
@@ -122,12 +80,12 @@ export function PlanningDetail({ id }: { id: string }) {
   const handleEdit = () => {
     const demoEditData = {
       ...planningData,
+      editedTitle: planningData.title.replace("왜", "왜 자주"),
       captions: planningData.captions.map((c) =>
         c.id === "2"
           ? { ...c, edited: "옷장에 바지는 많은데 막상 입는 바지는 몇 벌 안 됩니다." }
           : c
       ),
-      addedHashtags: ["#남자바지"],
     }
     setEditedData(demoEditData)
     if (isMobile) {
@@ -161,37 +119,8 @@ export function PlanningDetail({ id }: { id: string }) {
 
   const handleConfirmCancel = () => {
     setCancelModalOpen(false)
-    setFeedback(initialFeedbackRef.current)
     setEditedData(planningData)
     setIsEditMode(false)
-  }
-
-  const handleAddComment = (content: string, parentId?: string) => {
-    const newComment: FeedbackComment = {
-      id: `${Date.now()}`,
-      author: "클라이언트(나)",
-      authorType: "client",
-      content,
-      timestamp: new Date().toLocaleString("ko-KR", {
-        month: "numeric",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      replies: [],
-    }
-
-    if (parentId) {
-      setFeedback((prev) =>
-        prev.map((c) =>
-          c.id === parentId
-            ? { ...c, replies: [...(c.replies || []), newComment] }
-            : c
-        )
-      )
-    } else {
-      setFeedback((prev) => [...prev, newComment])
-    }
   }
 
   const openImageViewer = (
@@ -242,27 +171,13 @@ export function PlanningDetail({ id }: { id: string }) {
         <div className="hidden sm:flex items-center gap-2">
           {!isEditMode ? (
             <>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        size="sm"
-                        disabled={hasNewFeedback}
-                        onClick={() => setApproveModalOpen(true)}
-                      >
-                        <Check className="size-4 mr-1.5" />
-                        승인
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {hasNewFeedback && (
-                    <TooltipContent>
-                      <p>피드백이 작성되어 승인할 수 없습니다. 피드백을 완료하거나 취소해주세요.</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
+              <Button
+                size="sm"
+                onClick={() => setApproveModalOpen(true)}
+              >
+                <Check className="size-4 mr-1.5" />
+                승인
+              </Button>
               <Button variant="outline" size="sm" onClick={handleEdit}>
                 <Pencil className="size-4 mr-1.5" />
                 수정
@@ -270,16 +185,13 @@ export function PlanningDetail({ id }: { id: string }) {
             </>
           ) : (
             <>
-              <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B" | "C" | "D" | "E")}>
+              <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B")}>
                 <SelectTrigger size="sm" className="w-[80px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="A">A안(기존)</SelectItem>
                   <SelectItem value="B">B안(폼수정)</SelectItem>
-                  <SelectItem value="C">C안(테스트)</SelectItem>
-                  <SelectItem value="D">D안(피드백 변경)</SelectItem>
-                  <SelectItem value="E">E안(테스트)</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm" onClick={handleCancel}>
@@ -298,157 +210,41 @@ export function PlanningDetail({ id }: { id: string }) {
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Desktop layout */}
         <div className="hidden md:flex flex-1 h-full">
-          {isEditMode ? (
-            <>
-              {/* Edit mode: 70/30 split — planning + feedback */}
-              <div className="w-[70%] border-r border-border overflow-hidden">
-                <PlanningContent
-                  data={editedData}
-                  isEditMode={true}
-                  captionEditMode={captionEditMode}
-                  onDataChange={setEditedData}
-                  onImageClick={openImageViewer}
-                />
-              </div>
-              <div className="w-[30%] flex flex-col overflow-hidden">
-                <FeedbackPanel
-                  comments={feedback}
-                  onAddComment={handleAddComment}
-                  isReadOnly={false}
-                  feedbackInputRef={feedbackInputRef}
-                  pendingIds={captionEditMode === "D" || captionEditMode === "E" ? pendingIds : undefined}
-                  wrapPending={captionEditMode === "E"}
-                />
-              </div>
-            </>
-          ) : (
-            /* Read-only: 70/30 split — planning + feedback read-only */
-            <>
-              <div className="w-[70%] border-r border-border overflow-hidden">
-                <PlanningContent
-                  data={planningData}
-                  isEditMode={false}
-                  onImageClick={openImageViewer}
-                />
-              </div>
-              <div className="w-[30%] flex flex-col overflow-hidden">
-                <FeedbackPanel
-                  comments={feedback}
-                  onAddComment={handleAddComment}
-                  isReadOnly={true}
-                />
-              </div>
-            </>
-          )}
+          <div className="flex-1 overflow-hidden">
+            <PlanningContent
+              data={isEditMode ? editedData : planningData}
+              isEditMode={isEditMode}
+              captionEditMode={captionEditMode}
+              onDataChange={setEditedData}
+              onImageClick={openImageViewer}
+            />
+          </div>
         </div>
 
         {/* Mobile layout */}
         <div className="md:hidden flex-1 flex flex-col min-h-0">
-          {isEditMode ? (
-            /* Edit mode: tabs for planning + feedback */
-            <Tabs
-              value={mobileTab}
-              onValueChange={setMobileTab}
-              className="flex-1 flex flex-col min-h-0"
-            >
-              <TabsList className="w-full rounded-none border-b border-border bg-transparent h-auto p-0">
-                <TabsTrigger
-                  value="planning"
-                  className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
-                >
-                  기획서
-                </TabsTrigger>
-                <TabsTrigger
-                  value="feedback"
-                  className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
-                >
-                  피드백
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="planning" className="flex-1 m-0 min-h-0 overflow-y-auto">
-                <PlanningContent
-                  data={editedData}
-                  isEditMode={true}
-                  captionEditMode={captionEditMode}
-                  onDataChange={setEditedData}
-                  onImageClick={openImageViewer}
-                />
-              </TabsContent>
-              <TabsContent value="feedback" className="flex-1 m-0 min-h-0 overflow-hidden flex flex-col">
-                <FeedbackPanel
-                  comments={feedback}
-                  onAddComment={handleAddComment}
-                  isReadOnly={false}
-                  feedbackInputRef={feedbackInputRef}
-                  pendingIds={captionEditMode === "D" || captionEditMode === "E" ? pendingIds : undefined}
-                  wrapPending={captionEditMode === "E"}
-                />
-              </TabsContent>
-            </Tabs>
-          ) : (
-            /* Read-only: tabs for planning + feedback read-only */
-            <Tabs
-              value={mobileTab}
-              onValueChange={setMobileTab}
-              className="flex-1 flex flex-col min-h-0"
-            >
-              <TabsList className="w-full rounded-none border-b border-border bg-transparent h-auto p-0">
-                <TabsTrigger
-                  value="planning"
-                  className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
-                >
-                  기획서
-                </TabsTrigger>
-                <TabsTrigger
-                  value="feedback"
-                  className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
-                >
-                  피드백
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="planning" className="flex-1 m-0 min-h-0 overflow-y-auto">
-                <PlanningContent
-                  data={planningData}
-                  isEditMode={false}
-                  onImageClick={openImageViewer}
-                />
-              </TabsContent>
-              <TabsContent value="feedback" className="flex-1 m-0 min-h-0 overflow-hidden flex flex-col">
-                <FeedbackPanel
-                  comments={feedback}
-                  onAddComment={handleAddComment}
-                  isReadOnly={true}
-                />
-              </TabsContent>
-            </Tabs>
-          )}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <PlanningContent
+              data={isEditMode ? editedData : planningData}
+              isEditMode={isEditMode}
+              captionEditMode={captionEditMode}
+              onDataChange={setEditedData}
+              onImageClick={openImageViewer}
+            />
+          </div>
 
           {/* Mobile bottom action bar */}
           <div className="shrink-0 border-t border-border p-4 bg-background">
             <div className="flex gap-2">
               {!isEditMode ? (
                 <>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <span className="flex-1">
-                        <Button
-                          size="sm"
-                          className="w-full"
-                          disabled={hasNewFeedback}
-                          onClick={() => {
-                            if (!hasNewFeedback) setApproveModalOpen(true)
-                          }}
-                        >
-                          승인
-                        </Button>
-                      </span>
-                    </PopoverTrigger>
-                    {hasNewFeedback && (
-                      <PopoverContent className="w-auto max-w-[240px] p-3">
-                        <p className="text-sm">피드백이 작성되어 승인할 수 없습니다. 피드백을 완료하거나 취소해주세요.</p>
-                      </PopoverContent>
-                    )}
-                  </Popover>
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setApproveModalOpen(true)}
+                  >
+                    승인
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -460,16 +256,13 @@ export function PlanningDetail({ id }: { id: string }) {
                 </>
               ) : (
                 <>
-                  <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B" | "C" | "D" | "E")}>
+                  <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B")}>
                     <SelectTrigger size="sm" className="w-[80px] shrink-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="A">A안(기존)</SelectItem>
                       <SelectItem value="B">B안(폼수정)</SelectItem>
-                      <SelectItem value="C">C안(테스트)</SelectItem>
-                      <SelectItem value="D">D안(피드백 변경)</SelectItem>
-                  <SelectItem value="E">E안(테스트)</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button
