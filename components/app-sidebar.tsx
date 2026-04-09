@@ -38,13 +38,13 @@ import {
 const BRAND_LOGO = "https://depart-recruit-service.s3.ap-northeast-2.amazonaws.com/production/public/2026/03/27/721d04d4-eddc-49b0-839e-d98320836ddf.png"
 
 interface AppSidebarProps {
-  activePage?: "dashboard" | "calendar" | "calendar-brand" | "performance"
+  activePage?: "dashboard" | "calendar" | "calendar-brand" | "calendar-unified" | "performance"
 }
 
 export function AppSidebar({ activePage = "dashboard" }: AppSidebarProps) {
   const { state } = useSidebar()
   const isCollapsed = state === "collapsed"
-  const isProductionArea = activePage === "dashboard" || activePage === "calendar" || activePage === "calendar-brand"
+  const isProductionArea = activePage === "dashboard" || activePage === "calendar" || activePage === "calendar-brand" || activePage === "calendar-unified"
   const { today, setToday, todayStr } = useSimulatedDate()
   const { variant, setVariant } = useDesignVariant()
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"]
@@ -110,6 +110,13 @@ export function AppSidebar({ activePage = "dashboard" }: AppSidebarProps) {
                         </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton asChild isActive={activePage === "calendar-unified"}>
+                        <Link href="/calendar/unified">
+                          <span>통합 캘린더</span>
+                        </Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 )}
               </SidebarMenuItem>
@@ -138,6 +145,14 @@ export function AppSidebar({ activePage = "dashboard" }: AppSidebarProps) {
                       <Link href="/calendar/brand">
                         <CalendarHeart className="size-4" />
                         <span>브랜드 캘린더</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton tooltip="통합 캘린더" asChild isActive={activePage === "calendar-unified"}>
+                      <Link href="/calendar/unified">
+                        <CalendarDays className="size-4" />
+                        <span>통합 캘린더</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
