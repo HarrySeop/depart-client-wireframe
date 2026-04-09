@@ -81,7 +81,34 @@ export function ContentDetail({ id }: { id: string }) {
   const [viewerOpen, setViewerOpen] = React.useState(false)
   const [mobileFeedbackDrawerOpen, setMobileFeedbackDrawerOpen] = React.useState(false)
 
-  const hasNewFeedback = feedback.length > initialFeedback.length
+  const initialFeedbackRef = React.useRef(initialFeedback)
+  const hasNewFeedback = feedback.length > initialFeedbackRef.current.length
+
+  const initialCommentIds = React.useMemo(() => {
+    const ids = new Set<string>()
+    const collect = (comments: FeedbackComment[]) => {
+      for (const c of comments) {
+        ids.add(c.id)
+        if (c.replies) collect(c.replies)
+      }
+    }
+    collect(initialFeedbackRef.current)
+    return ids
+  }, [])
+
+  const pendingIds = React.useMemo(() => {
+    const pending = new Set<string>()
+    const check = (comments: FeedbackComment[]) => {
+      for (const c of comments) {
+        if (!initialCommentIds.has(c.id)) pending.add(c.id)
+        if (c.replies) check(c.replies)
+      }
+    }
+    check(feedback)
+    return pending
+  }, [feedback, initialCommentIds])
+
+  const isReadOnlyFeedback = status !== "제작완료"
 
   const handleApprove = () => {
     setStatus("승인완료")
@@ -336,7 +363,7 @@ export function ContentDetail({ id }: { id: string }) {
 
             {/* Desktop actions */}
             <div className="hidden sm:flex items-center gap-2">
-              {status === "승인완료" ? (
+              {isReadOnlyFeedback ? (
                 <>
                   {isFeedbackMode ? (
                     <Button variant="outline" size="sm" onClick={() => setIsFeedbackMode(false)}>
@@ -407,8 +434,10 @@ export function ContentDetail({ id }: { id: string }) {
                 <FeedbackPanel
                   comments={feedback}
                   onAddComment={handleAddFeedback}
-                  isReadOnly={status === "승인완료"}
+                  isReadOnly={isReadOnlyFeedback}
                   feedbackInputRef={feedbackInputRef}
+                  pendingIds={isReadOnlyFeedback ? undefined : pendingIds}
+                  wrapPending={!isReadOnlyFeedback}
                 />
               </div>
             </>
@@ -428,7 +457,7 @@ export function ContentDetail({ id }: { id: string }) {
       {/* Mobile bottom action bar */}
       <div className="md:hidden shrink-0 border-t border-border p-4 bg-background">
         <div className="flex gap-2">
-          {status === "승인완료" ? (
+          {isReadOnlyFeedback ? (
             <Button variant="outline" size="sm" className="flex-1" onClick={() => setMobileFeedbackDrawerOpen(true)}>
               피드백
             </Button>
@@ -581,12 +610,14 @@ export function ContentDetail({ id }: { id: string }) {
             <FeedbackPanel
               comments={feedback}
               onAddComment={handleAddFeedback}
-              isReadOnly={status === "승인완료"}
+              isReadOnly={isReadOnlyFeedback}
               feedbackInputRef={feedbackInputRef}
+              pendingIds={isReadOnlyFeedback ? undefined : pendingIds}
+              wrapPending={!isReadOnlyFeedback}
             />
           </div>
           <DrawerFooter className="border-t border-border">
-            {status === "승인완료" ? (
+            {isReadOnlyFeedback ? (
               <DrawerClose asChild>
                 <Button variant="outline" className="w-full">닫기</Button>
               </DrawerClose>
