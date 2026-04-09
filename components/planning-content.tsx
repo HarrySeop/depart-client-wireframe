@@ -30,9 +30,11 @@ interface PlanningData {
 interface PlanningContentProps {
   data: PlanningData
   isEditMode: boolean
-  captionEditMode?: "A" | "B"
+  captionEditMode?: "A" | "B" | "C" | "D" | "E" | "F"
   onDataChange?: (data: PlanningData) => void
   onImageClick?: (images: { src: string; alt: string }[], index: number) => void
+  panelRole?: "original" | "modified"
+  diffStyle?: "strikethrough" | "background"
 }
 
 // Inline diff component — shows deleted (strikethrough) and added (underline) in same line
@@ -98,12 +100,75 @@ function TrackedText({
   )
 }
 
+// Background-style diff component — deleted (red bg) and added (green bg)
+function TrackedTextBg({
+  original,
+  edited,
+}: {
+  original: string
+  edited?: string
+}) {
+  if (!edited || original === edited) {
+    return <span>{original}</span>
+  }
+
+  let prefixEnd = 0
+  while (
+    prefixEnd < original.length &&
+    prefixEnd < edited.length &&
+    original[prefixEnd] === edited[prefixEnd]
+  ) {
+    prefixEnd++
+  }
+
+  let suffixStart = 0
+  while (
+    suffixStart < original.length - prefixEnd &&
+    suffixStart < edited.length - prefixEnd &&
+    original[original.length - 1 - suffixStart] ===
+      edited[edited.length - 1 - suffixStart]
+  ) {
+    suffixStart++
+  }
+
+  const prefix = original.slice(0, prefixEnd)
+  const deletedPart = original.slice(prefixEnd, original.length - suffixStart)
+  const insertedPart = edited.slice(prefixEnd, edited.length - suffixStart)
+  const suffix = original.slice(original.length - suffixStart)
+
+  return (
+    <span>
+      {prefix}
+      {deletedPart && (
+        <span
+          className="font-bold line-through rounded-sm px-0.5"
+          style={{ backgroundColor: "#fecaca" }}
+        >
+          {deletedPart}
+        </span>
+      )}
+      {deletedPart && insertedPart && " "}
+      {insertedPart && (
+        <span
+          className="font-bold rounded-sm px-0.5"
+          style={{ backgroundColor: "#bbf7d0" }}
+        >
+          {insertedPart}
+        </span>
+      )}
+      {suffix}
+    </span>
+  )
+}
+
 export function PlanningContent({
   data,
   isEditMode,
   captionEditMode = "A",
   onDataChange,
   onImageClick,
+  panelRole,
+  diffStyle = "strikethrough",
 }: PlanningContentProps) {
   const updateTitle = (value: string) => {
     if (!onDataChange) return
@@ -120,6 +185,8 @@ export function PlanningContent({
 
   const imageFiles = data.referenceFiles.filter((f) => f.type === "image")
 
+  const DiffComponent = diffStyle === "background" ? TrackedTextBg : TrackedText
+
   return (
     <ScrollArea className="h-full">
       <div className="p-6 space-y-6">
@@ -128,8 +195,50 @@ export function PlanningContent({
           <h3 className="text-xs font-medium text-muted-foreground mb-2">
             기획안 제목
           </h3>
-          {isEditMode ? (
-            captionEditMode === "B" ? (
+          {panelRole === "original" ? (
+            <p className="text-lg font-medium">{data.title}</p>
+          ) : isEditMode && panelRole === "modified" ? (
+            captionEditMode === "D" ? (
+              <div className="relative min-h-[40px]">
+                <div
+                  className="text-lg font-medium leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap break-words min-h-[40px]"
+                  aria-hidden="true"
+                >
+                  <DiffComponent
+                    original={data.title}
+                    edited={data.editedTitle ?? data.title}
+                  />
+                </div>
+                <textarea
+                  value={data.editedTitle ?? data.title}
+                  onChange={(e) => updateTitle(e.target.value)}
+                  className="absolute inset-0 w-full h-full text-lg font-medium leading-relaxed p-3 rounded-md bg-transparent resize-none outline-none border border-transparent focus:border-ring focus:ring-ring/50 focus:ring-[3px]"
+                  style={{
+                    color: "transparent",
+                    caretColor: "var(--foreground)",
+                  }}
+                  placeholder="수정할 제목을 입력하세요..."
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-lg font-medium leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50">
+                  <DiffComponent
+                    original={data.title}
+                    edited={data.editedTitle ?? data.title}
+                  />
+                </div>
+                <Textarea
+                  value={data.editedTitle ?? data.title}
+                  onChange={(e) => updateTitle(e.target.value)}
+                  className="min-h-[40px] text-lg font-medium resize-none"
+                  placeholder="수정할 제목을 입력하세요..."
+                />
+              </div>
+            )
+          ) : isEditMode && !panelRole ? (
+            /* E/F 모드: 기존 동작 유지 */
+            captionEditMode === "D" ? (
               <div className="relative min-h-[40px]">
                 <div
                   className="text-lg font-medium leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap break-words min-h-[40px]"
@@ -169,7 +278,12 @@ export function PlanningContent({
             )
           ) : (
             <p className="text-lg font-medium">
-              {data.editedTitle && data.editedTitle !== data.title ? (
+              {panelRole === "modified" && data.editedTitle && data.editedTitle !== data.title ? (
+                <DiffComponent
+                  original={data.title}
+                  edited={data.editedTitle}
+                />
+              ) : data.editedTitle && data.editedTitle !== data.title ? (
                 <TrackedText
                   original={data.title}
                   edited={data.editedTitle}
@@ -208,21 +322,20 @@ export function PlanningContent({
             <h3 className="text-xs font-medium text-muted-foreground mb-2">
               {caption.label}
             </h3>
-            {isEditMode ? (
-              captionEditMode === "B" ? (
-                /* B안: 편집 영역 자체가 미리보기 — transparent textarea overlay */
+            {panelRole === "original" ? (
+              <p className="text-sm leading-relaxed">{caption.original}</p>
+            ) : isEditMode && panelRole === "modified" ? (
+              captionEditMode === "D" ? (
                 <div className="relative min-h-[60px]">
-                  {/* Visual layer: styled diff */}
                   <div
                     className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap break-words min-h-[60px]"
                     aria-hidden="true"
                   >
-                    <TrackedText
+                    <DiffComponent
                       original={caption.original}
                       edited={caption.edited ?? caption.original}
                     />
                   </div>
-                  {/* Interactive layer: transparent textarea */}
                   <textarea
                     value={caption.edited ?? caption.original}
                     onChange={(e) => updateCaption(caption.id, e.target.value)}
@@ -235,16 +348,53 @@ export function PlanningContent({
                   />
                 </div>
               ) : (
-                /* A안(기존): 미리보기 + Textarea 2단 구조 */
                 <div className="space-y-2">
-                  {/* Real-time inline diff preview */}
+                  <div className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50">
+                    <DiffComponent
+                      original={caption.original}
+                      edited={caption.edited ?? caption.original}
+                    />
+                  </div>
+                  <Textarea
+                    value={caption.edited ?? caption.original}
+                    onChange={(e) => updateCaption(caption.id, e.target.value)}
+                    className="min-h-[60px] text-sm resize-none"
+                    placeholder="수정할 내용을 입력하세요..."
+                  />
+                </div>
+              )
+            ) : isEditMode && !panelRole ? (
+              /* E/F 모드: 기존 동작 유지 */
+              captionEditMode === "D" ? (
+                <div className="relative min-h-[60px]">
+                  <div
+                    className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap break-words min-h-[60px]"
+                    aria-hidden="true"
+                  >
+                    <TrackedText
+                      original={caption.original}
+                      edited={caption.edited ?? caption.original}
+                    />
+                  </div>
+                  <textarea
+                    value={caption.edited ?? caption.original}
+                    onChange={(e) => updateCaption(caption.id, e.target.value)}
+                    className="absolute inset-0 w-full h-full text-sm leading-relaxed p-3 rounded-md bg-transparent resize-none outline-none border border-transparent focus:border-ring focus:ring-ring/50 focus:ring-[3px]"
+                    style={{
+                      color: "transparent",
+                      caretColor: "var(--foreground)",
+                    }}
+                    placeholder="수정할 내용을 입력하세요..."
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
                   <div className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50">
                     <TrackedText
                       original={caption.original}
                       edited={caption.edited ?? caption.original}
                     />
                   </div>
-                  {/* Edit textarea */}
                   <Textarea
                     value={caption.edited ?? caption.original}
                     onChange={(e) => updateCaption(caption.id, e.target.value)}
@@ -255,7 +405,12 @@ export function PlanningContent({
               )
             ) : (
               <p className="text-sm leading-relaxed">
-                {caption.edited && caption.edited !== caption.original ? (
+                {panelRole === "modified" && caption.edited && caption.edited !== caption.original ? (
+                  <DiffComponent
+                    original={caption.original}
+                    edited={caption.edited}
+                  />
+                ) : caption.edited && caption.edited !== caption.original ? (
                   <TrackedText
                     original={caption.original}
                     edited={caption.edited}
@@ -282,11 +437,20 @@ export function PlanningContent({
                 {tag}
               </span>
             ))}
-            {data.addedHashtags?.map((tag, idx) => (
+            {panelRole !== "original" && data.addedHashtags?.map((tag, idx) => (
               <span
                 key={`added-${idx}`}
-                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold underline"
-                style={{ color: "#dd3d2e" }}
+                className={cn(
+                  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold",
+                  diffStyle === "background"
+                    ? "rounded-sm"
+                    : "underline"
+                )}
+                style={
+                  diffStyle === "background"
+                    ? { backgroundColor: "#bbf7d0" }
+                    : { color: "#dd3d2e" }
+                }
               >
                 {tag}
               </span>

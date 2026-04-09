@@ -49,11 +49,22 @@ export function PlanningDetail({ id }: { id: string }) {
   const [isEditMode, setIsEditMode] = React.useState(false)
   const [planningData, setPlanningData] = React.useState(initialPlanningData)
   const [editedData, setEditedData] = React.useState(initialPlanningData)
-  const [captionEditMode, setCaptionEditMode] = React.useState<"A" | "B">("A")
+  const [originalData] = React.useState(initialPlanningData)
+  const [captionEditMode, setCaptionEditMode] = React.useState<"A" | "B" | "C" | "D" | "E" | "F">("A")
 
-  // Derived state for unsaved changes
+  // Derived state
   const hasEditChanges = JSON.stringify(editedData) !== JSON.stringify(planningData)
   const hasUnsavedChanges = hasEditChanges
+
+  // Split view logic
+  const isSplitMode = captionEditMode <= "D"
+  const showSplitView = (status === "수정 요청" || isEditMode) && isSplitMode
+  const diffStyle = (captionEditMode === "B" || captionEditMode === "D") ? "background" as const : "strikethrough" as const
+  const internalCaptionEditMode =
+    (captionEditMode === "A" || captionEditMode === "B") ? "D" as const :
+    (captionEditMode === "C" || captionEditMode === "D") ? "A" as const :
+    captionEditMode === "E" ? "A" as const :
+    "D" as const
 
   // Modals
   const [approveModalOpen, setApproveModalOpen] = React.useState(false)
@@ -78,6 +89,7 @@ export function PlanningDetail({ id }: { id: string }) {
   }
 
   const handleEdit = () => {
+    if (isMobile) return
     const demoEditData = {
       ...planningData,
       editedTitle: planningData.title.replace("왜", "왜 자주"),
@@ -88,11 +100,7 @@ export function PlanningDetail({ id }: { id: string }) {
       ),
     }
     setEditedData(demoEditData)
-    if (isMobile) {
-      setIsEditMode(true)
-    } else {
-      setIsEditMode(true)
-    }
+    setIsEditMode(true)
   }
 
   const handleCompleteEdit = () => {
@@ -185,13 +193,17 @@ export function PlanningDetail({ id }: { id: string }) {
             </>
           ) : (
             <>
-              <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B")}>
-                <SelectTrigger size="sm" className="w-[80px]">
+              <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B" | "C" | "D" | "E" | "F")}>
+                <SelectTrigger size="sm" className="w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="A">A안(기존)</SelectItem>
-                  <SelectItem value="B">B안(폼수정)</SelectItem>
+                  <SelectItem value="A">A안 (직접편집·취소선)</SelectItem>
+                  <SelectItem value="B">B안 (직접편집·빨강/초록)</SelectItem>
+                  <SelectItem value="C">C안 (프리뷰·취소선)</SelectItem>
+                  <SelectItem value="D">D안 (프리뷰·빨강/초록)</SelectItem>
+                  <SelectItem value="E">E안 (상하수정)</SelectItem>
+                  <SelectItem value="F">F안 (폼수정)</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm" onClick={handleCancel}>
@@ -210,78 +222,103 @@ export function PlanningDetail({ id }: { id: string }) {
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Desktop layout */}
         <div className="hidden md:flex flex-1 h-full">
-          <div className="flex-1 overflow-hidden">
-            <PlanningContent
-              data={isEditMode ? editedData : planningData}
-              isEditMode={isEditMode}
-              captionEditMode={captionEditMode}
-              onDataChange={setEditedData}
-              onImageClick={openImageViewer}
-            />
-          </div>
+          {showSplitView ? (
+            <div className="flex w-full h-full">
+              {/* Left panel - 원본 */}
+              <div className="w-1/2 h-full border-r border-border flex flex-col overflow-hidden">
+                <div className="shrink-0 px-4 py-2 border-b border-border bg-muted/30">
+                  <span className="text-xs font-medium text-muted-foreground">원본</span>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <PlanningContent
+                    data={originalData}
+                    isEditMode={false}
+                    panelRole="original"
+                    onImageClick={openImageViewer}
+                  />
+                </div>
+              </div>
+              {/* Right panel - 수정본 */}
+              <div className="w-1/2 h-full flex flex-col overflow-hidden">
+                <div className="shrink-0 px-4 py-2 border-b border-border bg-muted/30">
+                  <span className="text-xs font-medium text-muted-foreground">수정본</span>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <PlanningContent
+                    data={isEditMode ? editedData : planningData}
+                    isEditMode={isEditMode}
+                    captionEditMode={internalCaptionEditMode}
+                    diffStyle={diffStyle}
+                    panelRole="modified"
+                    onDataChange={setEditedData}
+                    onImageClick={openImageViewer}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-hidden">
+              <PlanningContent
+                data={isEditMode ? editedData : planningData}
+                isEditMode={isEditMode}
+                captionEditMode={isEditMode ? internalCaptionEditMode : undefined}
+                onDataChange={setEditedData}
+                onImageClick={openImageViewer}
+              />
+            </div>
+          )}
         </div>
 
         {/* Mobile layout */}
         <div className="md:hidden flex-1 flex flex-col min-h-0">
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <PlanningContent
-              data={isEditMode ? editedData : planningData}
-              isEditMode={isEditMode}
-              captionEditMode={captionEditMode}
-              onDataChange={setEditedData}
-              onImageClick={openImageViewer}
-            />
-          </div>
+          {status === "수정 요청" ? (
+            /* 수정 요청 상태: 상하 분할 읽기전용 */
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="border-b border-border">
+                <div className="px-4 py-2 bg-muted/30 border-b border-border">
+                  <span className="text-xs font-medium text-muted-foreground">원본</span>
+                </div>
+                <PlanningContent
+                  data={originalData}
+                  isEditMode={false}
+                  panelRole="original"
+                  onImageClick={openImageViewer}
+                />
+              </div>
+              <div>
+                <div className="px-4 py-2 bg-muted/30 border-b border-border">
+                  <span className="text-xs font-medium text-muted-foreground">수정본</span>
+                </div>
+                <PlanningContent
+                  data={planningData}
+                  isEditMode={false}
+                  diffStyle="strikethrough"
+                  panelRole="modified"
+                  onImageClick={openImageViewer}
+                />
+              </div>
+            </div>
+          ) : (
+            /* 기타 상태: 단일 컬럼 */
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <PlanningContent
+                data={planningData}
+                isEditMode={false}
+                onImageClick={openImageViewer}
+              />
+            </div>
+          )}
 
-          {/* Mobile bottom action bar */}
+          {/* Mobile bottom action bar - 승인만 */}
           <div className="shrink-0 border-t border-border p-4 bg-background">
             <div className="flex gap-2">
-              {!isEditMode ? (
-                <>
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setApproveModalOpen(true)}
-                  >
-                    승인
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={handleEdit}
-                  >
-                    수정
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B")}>
-                    <SelectTrigger size="sm" className="w-[80px] shrink-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A">A안(기존)</SelectItem>
-                      <SelectItem value="B">B안(폼수정)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={handleCancel}
-                  >
-                    취소
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    onClick={handleCompleteEdit}
-                  >
-                    수정완료
-                  </Button>
-                </>
-              )}
+              <Button
+                size="sm"
+                className="flex-1"
+                onClick={() => setApproveModalOpen(true)}
+              >
+                승인
+              </Button>
             </div>
           </div>
         </div>
