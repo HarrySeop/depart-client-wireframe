@@ -53,10 +53,12 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { getContentDetailById, type ContentData } from "@/lib/mock-data"
-import { sprints } from "@/lib/mock-data/contents"
+import { sprints, getContentFridayCutoff } from "@/lib/mock-data/contents"
+import { useSimulatedDate } from "@/lib/simulated-date-context"
 
 export function ContentDetail({ id }: { id: string }) {
   const isMobile = useIsMobile()
+  const { todayStr } = useSimulatedDate()
   const feedbackInputRef = React.useRef<HTMLTextAreaElement>(null)
 
   const { data: contentData, feedback: initialFeedback, sprint } = React.useMemo(
@@ -122,8 +124,17 @@ export function ContentDetail({ id }: { id: string }) {
     setRevisionModalOpen(false)
     setIsFeedbackMode(false)
     setMobileFeedbackDrawerOpen(false)
-    setStatus("컨펌 보류")
-    toast.success("피드백이 빌더에게 전달되었습니다. 해당 콘텐츠는 다음 스프린트로 이월됩니다.")
+
+    const fridayCutoff = getContentFridayCutoff(sprint)
+    const isBeforeFriday = fridayCutoff && todayStr <= fridayCutoff
+
+    if (isBeforeFriday) {
+      setStatus("수정 요청")
+      toast.success("수정 요청이 빌더에게 전달되었습니다. 빌더 수정 후 재전달됩니다.")
+    } else {
+      setStatus("컨펌 보류")
+      toast.success("피드백이 빌더에게 전달되었습니다. 해당 콘텐츠는 다음 스프린트로 이월됩니다.")
+    }
   }
 
   const handleAddFeedback = (content: string, parentId?: string) => {
@@ -180,10 +191,16 @@ export function ContentDetail({ id }: { id: string }) {
     ? `${nextSprint.name} (${nextSprint.startDate.slice(5).replace("-", "/")}~${nextSprint.endDate.slice(5).replace("-", "/")})`
     : "다음 스프린트"
 
+  const fridayCutoff = getContentFridayCutoff(sprint)
+  const isBeforeFridayCutoff = fridayCutoff && todayStr <= fridayCutoff
+
   const RevisionContent = () => (
     <div className="space-y-2">
       <p className="text-sm text-foreground">
-        피드백이 빌더에게 전달되며, 해당 콘텐츠는 {nextSprintLabel}로 이월됩니다. 수정 요청하시겠습니까?
+        {isBeforeFridayCutoff
+          ? "수정 요청이 빌더에게 전달됩니다. 빌더 수정 후 재전달됩니다. 수정 요청하시겠습니까?"
+          : `피드백이 빌더에게 전달되며, 해당 콘텐츠는 ${nextSprintLabel}로 이월됩니다. 수정 요청하시겠습니까?`
+        }
       </p>
       <p className="text-sm text-muted-foreground">{contentData.title}</p>
     </div>

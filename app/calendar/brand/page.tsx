@@ -2,20 +2,20 @@
 
 import { SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { CalendarView } from "@/components/calendar-view"
+import { BrandCalendarView } from "@/components/brand-calendar-view"
 import { PageHeader } from "@/components/page-header"
 import { Toaster } from "@/components/ui/sonner"
 
-export default function CalendarPage() {
+export default function BrandCalendarPage() {
   return (
     <>
-      <AppSidebar activePage="calendar" />
+      <AppSidebar activePage="calendar-brand" />
       <SidebarInset>
         <PageHeader>
-          <h1 className="text-lg font-semibold">제작 캘린더</h1>
+          <h1 className="text-lg font-semibold">브랜드 캘린더</h1>
         </PageHeader>
         <main className="flex-1 overflow-auto p-4 md:p-6">
-          <CalendarView />
+          <BrandCalendarView />
         </main>
       </SidebarInset>
       <Toaster />

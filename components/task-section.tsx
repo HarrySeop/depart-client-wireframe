@@ -88,9 +88,7 @@ export function TaskSection({
               : "현재 컨펌할 기획서가 없습니다"}
           </p>
           <p className="text-xs text-muted-foreground/70 mt-1">
-            {type === "content"
-              ? "콘텐츠는 일요일 자정에 전달됩니다"
-              : "기획서는 금요일 오후 4시에 전달됩니다"}
+            빌더 완성 시 전달됩니다
           </p>
         </div>
       ) : (

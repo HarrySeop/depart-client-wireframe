@@ -47,20 +47,15 @@ import { FeedbackPanel, type FeedbackComment } from "./feedback-panel"
 import { ImageViewer } from "./image-viewer"
 import { useIsMobile } from "@/components/ui/use-mobile"
 import { getPlanningDetailById } from "@/lib/mock-data"
-import { sprints } from "@/lib/mock-data/contents"
 
 export function PlanningDetail({ id }: { id: string }) {
   const isMobile = useIsMobile()
   const feedbackInputRef = React.useRef<HTMLTextAreaElement>(null)
 
-  const { data: initialPlanningData, feedback: initialFeedback, sprintNumber } = React.useMemo(
+  const { data: initialPlanningData, feedback: initialFeedback } = React.useMemo(
     () => getPlanningDetailById(id),
     [id]
   )
-
-  const nextSprint = React.useMemo(() => {
-    return sprints.find((s) => s.id === sprintNumber + 1)
-  }, [sprintNumber])
 
   // State
   const [status, setStatus] = React.useState<StatusType>("검토중")
@@ -150,8 +145,8 @@ export function PlanningDetail({ id }: { id: string }) {
     setPlanningData(editedData)
     setRevisionModalOpen(false)
     setIsEditMode(false)
-    setStatus("컨펌 보류")
-    toast.success("피드백이 빌더에게 전달되었습니다. 해당 기획은 다음 스프린트로 이월됩니다.")
+    setStatus("수정 요청")
+    toast.success("수정 사항이 빌더에게 전달되었습니다. 수정 요청 상태로 변경됩니다.")
   }
 
   const handleCancel = () => {
@@ -218,14 +213,10 @@ export function PlanningDetail({ id }: { id: string }) {
     </>
   )
 
-  const nextSprintLabel = nextSprint
-    ? `${nextSprint.name} (${nextSprint.startDate.slice(5).replace("-", "/")}~${nextSprint.endDate.slice(5).replace("-", "/")})`
-    : "다음 스프린트"
-
   const RevisionContent = () => (
     <div className="space-y-2">
       <p className="text-sm text-foreground">
-        피드백이 빌더에게 전달되며, 해당 기획은 {nextSprintLabel}로 이월됩니다. 수정 요청하시겠습니까?
+        수정 사항과 피드백이 빌더에게 전달되며, 수정 요청 상태로 변경됩니다. 수정 요청하시겠습니까?
       </p>
       <p className="text-sm text-muted-foreground">{planningData.title}</p>
     </div>

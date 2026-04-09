@@ -9,8 +9,10 @@ import { useSimulatedDate } from "@/lib/simulated-date-context"
 import {
   getVisiblePlanningItems,
   getVisibleContentItems,
+  getDashboardItems,
   getPlanningConfirmWindow,
   getContentConfirmWindow,
+  getNextDeliveryBadge,
   sprints,
 } from "@/lib/mock-data/contents"
 
@@ -24,27 +26,10 @@ function formatDeadline(dateStr: string, hour: string) {
   return `${d.getMonth() + 1}/${d.getDate()}(${dayNames[d.getDay()]}) ${hour}`
 }
 
-function getNextDayOfWeek(todayStr: string, targetDay: number): string {
-  const d = new Date(todayStr + "T00:00:00")
-  const current = d.getDay()
-  let daysUntil = targetDay - current
-  if (daysUntil <= 0) daysUntil += 7
-  d.setDate(d.getDate() + daysUntil)
-  const dayNames = ["일", "월", "화", "수", "목", "금", "토"]
-  return `${d.getMonth() + 1}/${d.getDate()}(${dayNames[d.getDay()]})`
-}
-
-function getNextPlanningDelivery(todayStr: string): string {
-  return `${getNextDayOfWeek(todayStr, 5)} 16:00`
-}
-
-function getNextContentDelivery(todayStr: string): string {
-  return `${getNextDayOfWeek(todayStr, 0)} 24:00`
-}
-
 export function DashboardContent() {
   const { todayStr } = useSimulatedDate()
   const currentSprint = getSprintForDate(todayStr)
+  const dashData = React.useMemo(() => getDashboardItems(todayStr), [todayStr])
 
   // Compute visible items based on sprint pipeline + simulated date
   const contentConfirmItems = React.useMemo(() => {
@@ -136,7 +121,7 @@ export function DashboardContent() {
           tasks={planningTasks}
           onConfirmAll={handlePlanningConfirmAll}
           type="planning"
-          nextDelivery={getNextPlanningDelivery(todayStr)}
+          nextDelivery={getNextDeliveryBadge(dashData.deliveredPlanningCount, dashData.totalPlanningCount, dashData.planningDeliveryDate) || undefined}
         />
 
         <Separator />
@@ -149,7 +134,7 @@ export function DashboardContent() {
           tasks={contentTasks}
           onConfirmAll={handleContentConfirmAll}
           type="content"
-          nextDelivery={getNextContentDelivery(todayStr)}
+          nextDelivery={getNextDeliveryBadge(dashData.deliveredContentCount, dashData.totalContentCount, dashData.contentDeliveryDate) || undefined}
         />
       </div>
     </>

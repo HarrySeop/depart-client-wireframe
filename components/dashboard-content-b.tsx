@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { useSimulatedDate } from "@/lib/simulated-date-context"
 import {
   getDashboardItems,
+  getNextDeliveryBadge,
   getPlanningConfirmWindow,
   getContentConfirmWindow,
   sprints,
@@ -25,24 +26,6 @@ function formatDeadline(dateStr: string, hour: string) {
   const d = new Date(dateStr + "T00:00:00")
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"]
   return `${d.getMonth() + 1}/${d.getDate()}(${dayNames[d.getDay()]}) ${hour}`
-}
-
-function getNextDayOfWeek(todayStr: string, targetDay: number): string {
-  const d = new Date(todayStr + "T00:00:00")
-  const current = d.getDay()
-  let daysUntil = targetDay - current
-  if (daysUntil <= 0) daysUntil += 7
-  d.setDate(d.getDate() + daysUntil)
-  const dayNames = ["일", "월", "화", "수", "목", "금", "토"]
-  return `${d.getMonth() + 1}/${d.getDate()}(${dayNames[d.getDay()]})`
-}
-
-function getNextPlanningDelivery(todayStr: string): string {
-  return `${getNextDayOfWeek(todayStr, 5)} 16:00`
-}
-
-function getNextContentDelivery(todayStr: string): string {
-  return `${getNextDayOfWeek(todayStr, 0)} 24:00`
 }
 
 export function DashboardContentB() {
@@ -178,7 +161,7 @@ export function DashboardContentB() {
               )}
               {!hasPlanningConfirm && (
                 <span className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
-                  {getNextPlanningDelivery(todayStr)} 기획서 전달 예정
+                  {getNextDeliveryBadge(data.deliveredPlanningCount, data.totalPlanningCount, data.planningDeliveryDate) || "빌더 완성 시 전달됩니다"}
                 </span>
               )}
               {/* 미컨펌 건수 뱃지 */}
@@ -262,7 +245,7 @@ export function DashboardContentB() {
               )}
               {!hasContentConfirm && (
                 <span className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
-                  {getNextContentDelivery(todayStr)} 콘텐츠 전달 예정
+                  {getNextDeliveryBadge(data.deliveredContentCount, data.totalContentCount, data.contentDeliveryDate) || "빌더 완성 시 전달됩니다"}
                 </span>
               )}
               {/* 미승인 건수 뱃지 */}

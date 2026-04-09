@@ -8,11 +8,14 @@ export interface ContentItem {
   contentType: "CARD_NEWS" | "SHORT_FORM"
   contentTypeLabel: string
   title: string
-  publishedAt: string // YYYY-MM-DD
+  publishedAt: string // YYYY-MM-DD — 업로드/게시 예정일 (audience용)
   sprint: number
   builderName: string
   designerName: string
   notionStatus: string
+  planningDeliveredAt?: string // ISO date: 빌더가 기획서를 완성하여 클라이언트에게 전달된 시점
+  contentDeliveredAt?: string  // ISO date: 빌더가 콘텐츠를 컨펌 완료하여 클라이언트에게 전달된 시점
+  feedbackStatus?: "수정 요청" | "수정완료" // 콘텐츠 피드백 후 상태 추적 (콘텐츠만 적용)
 }
 
 export const BRAND = {
@@ -21,19 +24,23 @@ export const BRAND = {
 }
 
 export const allContents: ContentItem[] = [
-  // Sprint 14 — 기획안 작성 완료 (기획서 컨펌 대기)
-  { id: "879", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #66 - 여름 출근룩, 격식과 편안함 사이에서", publishedAt: "2026-04-17", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "기획안 작성 완료" },
-  { id: "874", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #65 - 라인업을 확장하기 전에 먼저 해야 할 일", publishedAt: "2026-04-16", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "기획안 작성 완료" },
-  { id: "872", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #64 - 모레노 팬츠는 레귤러 핏부터 시작합니다", publishedAt: "2026-04-15", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "기획안 작성 완료" },
-  { id: "873", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #63 - 폴리에스터, 바지에 왜 자주 쓰일까요?", publishedAt: "2026-04-14", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "기획안 작성 완료" },
-  { id: "823", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #62 - 봄에는 이렇게 입어보세요", publishedAt: "2026-04-13", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "기획안 작성 완료" },
+  // Sprint 14 — 기획 완료, 콘텐츠 개별 전달 중
+  // 기획서 컨펌 윈도우: 04-03 ~ 04-06 (이미 완료)
+  // 콘텐츠 컨펌 윈도우: 04-12 ~ 04-13 (빌더가 개별 전달 중 → 일부 조기 도착)
+  { id: "880", contentType: "SHORT_FORM", contentTypeLabel: "숏폼", title: "숏폼 #11 - 체형별 바지 추천", publishedAt: "2026-04-18", sprint: 14, builderName: "이준혁", designerName: "한소율", notionStatus: "빌더 컨펌 완료", planningDeliveredAt: "2026-04-02", contentDeliveredAt: "2026-04-07" },
+  { id: "879", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #66 - 여름 출근룩, 격식과 편안함 사이에서", publishedAt: "2026-04-17", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "빌더 컨펌 완료", planningDeliveredAt: "2026-04-02", contentDeliveredAt: "2026-04-08" },
+  { id: "874", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #65 - 라인업을 확장하기 전에 먼저 해야 할 일", publishedAt: "2026-04-16", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "빌더 컨펌 완료", planningDeliveredAt: "2026-04-03", contentDeliveredAt: "2026-04-09" },
+  { id: "872", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #64 - 모레노 팬츠는 레귤러 핏부터 시작합니다", publishedAt: "2026-04-15", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "콘텐츠 제작 진행 중", planningDeliveredAt: "2026-04-03" },
+  { id: "873", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #63 - 폴리에스터, 바지에 왜 자주 쓰일까요?", publishedAt: "2026-04-14", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "콘텐츠 제작 진행 중", planningDeliveredAt: "2026-04-04" },
+  { id: "823", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #62 - 봄에는 이렇게 입어보세요", publishedAt: "2026-04-13", sprint: 14, builderName: "이준혁", designerName: "박서연", notionStatus: "콘텐츠 제작 진행 중", planningDeliveredAt: "2026-04-04" },
 
-  // Sprint 13 — mixed statuses (콘텐츠 컨펌 대기)
-  { id: "702", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #61 - 많은 후기를 보내주셨습니다", publishedAt: "2026-04-10", sprint: 13, builderName: "이준혁", designerName: "박서연", notionStatus: "빌더 컨펌 완료" },
-  { id: "703", contentType: "SHORT_FORM", contentTypeLabel: "숏폼", title: "숏폼 #10 - 흰 티셔츠 목늘어남 방지하는 법", publishedAt: "2026-04-09", sprint: 13, builderName: "이준혁", designerName: "한소율", notionStatus: "콘텐츠 제작 진행 중" },
-  { id: "700", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #60 - 청바지 오래 입는 관리법", publishedAt: "2026-04-08", sprint: 13, builderName: "이준혁", designerName: "박서연", notionStatus: "빌더 컨펌 완료" },
-  { id: "699", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #59 - 키가 크면 옷이 더 잘 어울릴까요?", publishedAt: "2026-04-07", sprint: 13, builderName: "이준혁", designerName: "박서연", notionStatus: "콘텐츠 제작 진행 중" },
-  { id: "701", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #58 - 공장 담당자분들이 자주 물어봅니다", publishedAt: "2026-04-06", sprint: 13, builderName: "이준혁", designerName: "박서연", notionStatus: "빌더 컨펌 완료" },
+  // Sprint 13 — 콘텐츠 컨펌 완료 (일부 피드백 상태 데모)
+  // 콘텐츠 컨펌 윈도우: 04-05 ~ 04-06 (개별 전달로 일부 조기 도착)
+  { id: "702", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #61 - 많은 후기를 보내주셨습니다", publishedAt: "2026-04-10", sprint: 13, builderName: "이준혁", designerName: "박서연", notionStatus: "빌더 컨펌 완료", planningDeliveredAt: "2026-03-26", contentDeliveredAt: "2026-04-02", feedbackStatus: "수정완료" },
+  { id: "703", contentType: "SHORT_FORM", contentTypeLabel: "숏폼", title: "숏폼 #10 - 흰 티셔츠 목늘어남 방지하는 법", publishedAt: "2026-04-09", sprint: 13, builderName: "이준혁", designerName: "한소율", notionStatus: "빌더 컨펌 완료", planningDeliveredAt: "2026-03-26", contentDeliveredAt: "2026-04-03" },
+  { id: "700", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #60 - 청바지 오래 입는 관리법", publishedAt: "2026-04-08", sprint: 13, builderName: "이준혁", designerName: "박서연", notionStatus: "빌더 컨펌 완료", planningDeliveredAt: "2026-03-27", contentDeliveredAt: "2026-04-04", feedbackStatus: "수정 요청" },
+  { id: "699", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #59 - 키가 크면 옷이 더 잘 어울릴까요?", publishedAt: "2026-04-07", sprint: 13, builderName: "이준혁", designerName: "박서연", notionStatus: "빌더 컨펌 완료", planningDeliveredAt: "2026-03-27", contentDeliveredAt: "2026-04-05" },
+  { id: "701", contentType: "CARD_NEWS", contentTypeLabel: "카드뉴스", title: "카드뉴스 #58 - 공장 담당자분들이 자주 물어봅니다", publishedAt: "2026-04-06", sprint: 13, builderName: "이준혁", designerName: "박서연", notionStatus: "빌더 컨펌 완료", planningDeliveredAt: "2026-03-28", contentDeliveredAt: "2026-04-05" },
 
   // Sprint 12 — 업로드 완료
   { id: "695", contentType: "SHORT_FORM", contentTypeLabel: "숏폼", title: "숏폼 #9 - 옷 잘 입었다는 말은 언제 들을 수 있을까요?", publishedAt: "2026-04-04", sprint: 12, builderName: "이준혁", designerName: "한소율", notionStatus: "업로드 완료" },
@@ -275,12 +282,13 @@ export function generateOriginalPlanCaptions(id: string, title: string): { label
 // --- Sprint pipeline visibility logic ---
 // Sprint N = 콘텐츠가 업로드/게시되는 주차 (Week C)
 // Pipeline (역방향):
-//   Sprint N-2 (Week A): 기획서 작성, 금요일 16:00 클라이언트 전달
-//   Sprint N-1 (Week B): 콘텐츠 제작, 일요일 24:00 클라이언트 전달
+//   Sprint N-2 (Week A): 기획서 작성, 빌더 완성 시 개별 전달 (기존: 금요일 16:00 일괄)
+//   Sprint N-1 (Week B): 콘텐츠 제작, 빌더 컨펌 완료 시 개별 전달 (기존: 일요일 24:00 일괄)
 //   Sprint N   (Week C): 클라이언트 컨펌 + 업로드
 //
-// 기획서 컨펌: Sprint N 기획서 → Friday of Sprint N-2 ~ Monday of Sprint N-1 (15:00)
-// 콘텐츠 컨펌: Sprint N 콘텐츠 → Sunday of Sprint N-1 ~ Monday of Sprint N (12:00)
+// 기획서 컨펌 마감: Monday of Sprint N-1 (15:00)
+// 콘텐츠 컨펌 마감: Monday of Sprint N (12:00)
+// 콘텐츠 피드백 분기: 해당 주 금요일 24:00 (이전=수정 요청, 이후=이월)
 
 function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + "T00:00:00")
@@ -311,25 +319,40 @@ export function getContentConfirmWindow(sprintId: number): { start: string; end:
   return { start: sunday, end: deadline, deadlineSprint: sprintId }
 }
 
-/** 대시보드 기획서 컨펌: 날짜 윈도우만으로 판단 (notionStatus 무시 — 와이어프레임 시뮬레이션) */
+/**
+ * 콘텐츠 피드백 금요일 24시 커트오프 날짜.
+ * 이 날짜 이하이면 "수정 요청" 가능, 초과이면 "이월".
+ * 계산: 콘텐츠 컨펌 마감(월요일) - 3일 = 금요일
+ */
+export function getContentFridayCutoff(sprintId: number): string | null {
+  const window = getContentConfirmWindow(sprintId)
+  if (!window) return null
+  return addDays(window.end, -3)
+}
+
+/** 대시보드 기획서 컨펌: deliveredAt 기반 개별 필터링 */
 export function getVisiblePlanningItems(todayStr: string): ContentItem[] {
   return allContents.filter((c) => {
+    if (!c.planningDeliveredAt) return false
+    if (c.planningDeliveredAt > todayStr) return false // 아직 전달 안 됨
     const window = getPlanningConfirmWindow(c.sprint)
     if (!window) return false
-    return todayStr >= window.start && todayStr <= window.end
+    return todayStr <= window.end // 마감 전까지만 표시
   })
 }
 
-/** 대시보드 콘텐츠 컨펌: 날짜 윈도우만으로 판단 */
+/** 대시보드 콘텐츠 컨펌: deliveredAt 기반 개별 필터링 */
 export function getVisibleContentItems(todayStr: string): ContentItem[] {
   return allContents.filter((c) => {
+    if (!c.contentDeliveredAt) return false
+    if (c.contentDeliveredAt > todayStr) return false // 아직 전달 안 됨
     const window = getContentConfirmWindow(c.sprint)
     if (!window) return false
-    return todayStr >= window.start && todayStr <= window.end
+    return todayStr <= window.end // 마감 전까지만 표시
   })
 }
 
-/** B안/C안용: 대시보드에 항상 표시할 항목 + 미승인 건수 */
+/** B안/C안용: 대시보드에 항상 표시할 항목 + 전달 현황 */
 export interface DashboardItems {
   planningConfirm: ContentItem[]
   contentConfirm: ContentItem[]
@@ -339,6 +362,12 @@ export interface DashboardItems {
   pendingContentCount: number
   nextPlanningDeadline: string | null
   nextContentDeadline: string | null
+  deliveredPlanningCount: number
+  totalPlanningCount: number
+  deliveredContentCount: number
+  totalContentCount: number
+  planningDeliveryDate: string | null  // 기획서 전달 마감일 (금요일)
+  contentDeliveryDate: string | null   // 콘텐츠 전달 마감일 (일요일)
 }
 
 export function getDashboardItems(todayStr: string): DashboardItems {
@@ -359,36 +388,63 @@ export function getDashboardItems(todayStr: string): DashboardItems {
     return computeClientStatus(c, todayStr) === "업로드 완료"
   })
 
-  // 미승인 건수: 가장 가까운 미래 컨펌 윈도우에 올라올 건수
-  // 기획서: 현재 컨펌 윈도우 안이면 그 건수, 아니면 다음 윈도우 건수
-  let pendingPlanningCount = planningConfirm.length
+  // 기획서 전달 현황: 가장 가까운 컨펌 윈도우의 스프린트 기준
+  let pendingPlanningCount = 0
   let nextPlanningDeadline: string | null = null
+  let deliveredPlanningCount = 0
+  let totalPlanningCount = 0
+  let planningDeliveryDate: string | null = null
+
   if (planningConfirm.length > 0) {
-    const w = getPlanningConfirmWindow(planningConfirm[0].sprint)
+    const targetSprint = planningConfirm[0].sprint
+    const w = getPlanningConfirmWindow(targetSprint)
     nextPlanningDeadline = w ? w.end : null
+    planningDeliveryDate = w ? w.start : null
+    const sprintItems = allContents.filter((c) => c.sprint === targetSprint)
+    totalPlanningCount = sprintItems.length
+    deliveredPlanningCount = sprintItems.filter((c) => c.planningDeliveredAt && c.planningDeliveredAt <= todayStr).length
+    pendingPlanningCount = totalPlanningCount - deliveredPlanningCount
   } else {
-    // 다음 컨펌 윈도우 찾기
     for (const sp of sprints) {
       const w = getPlanningConfirmWindow(sp.id)
-      if (w && todayStr < w.start) {
-        pendingPlanningCount = allContents.filter((c) => c.sprint === sp.id).length
+      if (w && todayStr <= w.end) {
+        const sprintItems = allContents.filter((c) => c.sprint === sp.id)
+        totalPlanningCount = sprintItems.length
+        deliveredPlanningCount = sprintItems.filter((c) => c.planningDeliveredAt && c.planningDeliveredAt <= todayStr).length
+        pendingPlanningCount = totalPlanningCount - deliveredPlanningCount
         nextPlanningDeadline = w.end
+        planningDeliveryDate = w.start
         break
       }
     }
   }
 
-  let pendingContentCount = contentConfirm.length
+  // 콘텐츠 전달 현황
+  let pendingContentCount = 0
   let nextContentDeadline: string | null = null
+  let deliveredContentCount = 0
+  let totalContentCount = 0
+  let contentDeliveryDate: string | null = null
+
   if (contentConfirm.length > 0) {
-    const w = getContentConfirmWindow(contentConfirm[0].sprint)
+    const targetSprint = contentConfirm[0].sprint
+    const w = getContentConfirmWindow(targetSprint)
     nextContentDeadline = w ? w.end : null
+    contentDeliveryDate = w ? w.start : null
+    const sprintItems = allContents.filter((c) => c.sprint === targetSprint)
+    totalContentCount = sprintItems.length
+    deliveredContentCount = sprintItems.filter((c) => c.contentDeliveredAt && c.contentDeliveredAt <= todayStr).length
+    pendingContentCount = totalContentCount - deliveredContentCount
   } else {
     for (const sp of sprints) {
       const w = getContentConfirmWindow(sp.id)
-      if (w && todayStr < w.start) {
-        pendingContentCount = allContents.filter((c) => c.sprint === sp.id).length
+      if (w && todayStr <= w.end) {
+        const sprintItems = allContents.filter((c) => c.sprint === sp.id)
+        totalContentCount = sprintItems.length
+        deliveredContentCount = sprintItems.filter((c) => c.contentDeliveredAt && c.contentDeliveredAt <= todayStr).length
+        pendingContentCount = totalContentCount - deliveredContentCount
         nextContentDeadline = w.end
+        contentDeliveryDate = w.start
         break
       }
     }
@@ -403,31 +459,44 @@ export function getDashboardItems(todayStr: string): DashboardItems {
     pendingContentCount,
     nextPlanningDeadline,
     nextContentDeadline,
+    deliveredPlanningCount,
+    totalPlanningCount,
+    deliveredContentCount,
+    totalContentCount,
+    planningDeliveryDate,
+    contentDeliveryDate,
   }
 }
 
 /** 클라이언트 뷰 상태 계산 (캘린더, 상세 페이지용) */
 export type ClientStatus =
-  | "기획완료" | "검토중" | "수정 요청" | "최종 확정"
+  | "기획완료" | "검토중" | "수정 요청" | "수정완료" | "최종 확정"
   | "제작중" | "제작완료" | "승인완료"
   | "업로드 대기" | "업로드 완료"
 
 export function computeClientStatus(content: ContentItem, todayStr: string): ClientStatus {
-  // 기획서 컨펌 윈도우 안에 있으면 → 기획완료 (클라이언트가 컨펌해야 하는 상태)
+  // 피드백 상태가 있으면 우선 반환
+  if (content.feedbackStatus === "수정 요청") return "수정 요청"
+  if (content.feedbackStatus === "수정완료") return "수정완료"
+
+  // 기획서: deliveredAt이 있고 마감 전이면 → 기획완료
   const planWindow = getPlanningConfirmWindow(content.sprint)
-  if (planWindow && todayStr >= planWindow.start && todayStr <= planWindow.end) {
-    return "기획완료"
+  if (content.planningDeliveredAt && planWindow) {
+    if (content.planningDeliveredAt <= todayStr && todayStr <= planWindow.end) {
+      return "기획완료"
+    }
   }
 
-  // 콘텐츠 컨펌 윈도우 안에 있으면 → 제작완료
+  // 콘텐츠: deliveredAt이 있고 마감 전이면 → 제작완료
   const contentWindow = getContentConfirmWindow(content.sprint)
-  if (contentWindow && todayStr >= contentWindow.start && todayStr <= contentWindow.end) {
-    return "제작완료"
+  if (content.contentDeliveredAt && contentWindow) {
+    if (content.contentDeliveredAt <= todayStr && todayStr <= contentWindow.end) {
+      return "제작완료"
+    }
   }
 
   // 콘텐츠 컨펌 윈도우 이후 → 업로드 대기 or 완료
   if (contentWindow && todayStr > contentWindow.end) {
-    // Sprint N의 업로드 주간 (Sprint N) 이후면 업로드 완료로 간주
     const uploadSprint = sprints.find((s) => s.id === content.sprint)
     if (uploadSprint && todayStr > uploadSprint.endDate) return "업로드 완료"
     return "업로드 대기"
@@ -438,6 +507,23 @@ export function computeClientStatus(content: ContentItem, todayStr: string): Cli
     if (!contentWindow || todayStr < contentWindow.start) return "제작중"
   }
 
-  // 기획서 컨펌 윈도우 이전 → 아직 클라이언트에게 보이지 않음
   return "제작중"
+}
+
+// --- 전달 메시지 헬퍼 (대시보드 공통) ---
+
+function formatDateWithDay(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00")
+  const dayNames = ["일", "월", "화", "수", "목", "금", "토"]
+  return `${d.getMonth() + 1}/${d.getDate()}(${dayNames[d.getDay()]})`
+}
+
+/** 전달 예정 뱃지 메시지 (비어있을 때 파란 뱃지용) */
+export function getNextDeliveryBadge(delivered: number, total: number, deliveryDate: string | null): string {
+  if (!deliveryDate) return ""
+  const formatted = formatDateWithDay(deliveryDate)
+  if (total === 0) return `${formatted} 까지`
+  if (delivered === 0) return `${formatted} 까지`
+  if (delivered >= total) return ""
+  return `${delivered}/${total}건 전달완료 · ${formatted} 까지`
 }

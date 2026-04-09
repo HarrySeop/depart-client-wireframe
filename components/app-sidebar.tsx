@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   Calendar as CalendarIcon,
+  CalendarHeart,
   BarChart3,
   Archive,
   LogOut,
@@ -37,13 +38,13 @@ import {
 const BRAND_LOGO = "https://depart-recruit-service.s3.ap-northeast-2.amazonaws.com/production/public/2026/03/27/721d04d4-eddc-49b0-839e-d98320836ddf.png"
 
 interface AppSidebarProps {
-  activePage?: "dashboard" | "calendar" | "performance"
+  activePage?: "dashboard" | "calendar" | "calendar-brand" | "performance"
 }
 
 export function AppSidebar({ activePage = "dashboard" }: AppSidebarProps) {
   const { state } = useSidebar()
   const isCollapsed = state === "collapsed"
-  const isProductionArea = activePage === "dashboard" || activePage === "calendar"
+  const isProductionArea = activePage === "dashboard" || activePage === "calendar" || activePage === "calendar-brand"
   const { today, setToday, todayStr } = useSimulatedDate()
   const { variant, setVariant } = useDesignVariant()
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"]
@@ -98,7 +99,14 @@ export function AppSidebar({ activePage = "dashboard" }: AppSidebarProps) {
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton asChild isActive={activePage === "calendar"}>
                         <Link href="/calendar">
-                          <span>캘린더</span>
+                          <span>제작 캘린더</span>
+                        </Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton asChild isActive={activePage === "calendar-brand"}>
+                        <Link href="/calendar/brand">
+                          <span>브랜드 캘린더</span>
                         </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
@@ -118,10 +126,18 @@ export function AppSidebar({ activePage = "dashboard" }: AppSidebarProps) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton tooltip="캘린더" asChild isActive={activePage === "calendar"}>
+                    <SidebarMenuButton tooltip="제작 캘린더" asChild isActive={activePage === "calendar"}>
                       <Link href="/calendar">
                         <CalendarIcon className="size-4" />
-                        <span>캘린더</span>
+                        <span>제작 캘린더</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton tooltip="브랜드 캘린더" asChild isActive={activePage === "calendar-brand"}>
+                      <Link href="/calendar/brand">
+                        <CalendarHeart className="size-4" />
+                        <span>브랜드 캘린더</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

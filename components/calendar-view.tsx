@@ -36,45 +36,7 @@ interface CalendarEvent {
 
 // Events and sprints are now dynamically generated from allContents + computeClientStatus
 
-const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
-function formatDate(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, "0")
-  const d = String(date.getDate()).padStart(2, "0")
-  return `${y}-${m}-${d}`
-}
-
-function isInSprint(date: Date, todayStr: string): boolean {
-  const dateStr = formatDate(date)
-  const current = sprintDefs.find((s) => todayStr >= s.startDate && todayStr <= s.endDate)
-  if (!current) return false
-  return dateStr >= current.startDate && dateStr <= current.endDate
-}
-
-function getSprintForDate(date: Date) {
-  const dateStr = formatDate(date)
-  return sprintDefs.find((s) => dateStr >= s.startDate && dateStr <= s.endDate)
-}
-
-function getMonthDays(year: number, month: number) {
-  const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
-  let startDayOfWeek = firstDay.getDay() - 1
-  if (startDayOfWeek < 0) startDayOfWeek = 6
-
-  const days: { date: Date; isCurrentMonth: boolean }[] = []
-  for (let i = startDayOfWeek - 1; i >= 0; i--) {
-    days.push({ date: new Date(year, month, -i), isCurrentMonth: false })
-  }
-  for (let i = 1; i <= lastDay.getDate(); i++) {
-    days.push({ date: new Date(year, month, i), isCurrentMonth: true })
-  }
-  const remaining = 42 - days.length
-  for (let i = 1; i <= remaining; i++) {
-    days.push({ date: new Date(year, month + 1, i), isCurrentMonth: false })
-  }
-  return days
-}
+import { WEEKDAYS, formatDate, isInSprint, getSprintForDate, getMonthDays } from "@/lib/calendar-utils"
 
 // --- Event Card (2-3 lines) ---
 function EventCard({ event }: { event: CalendarEvent }) {
@@ -406,24 +368,39 @@ export function CalendarView() {
   const goToNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
   const goToToday = () => setCurrentDate(today)
 
-  // Generate events from content data
+  // Generate events from content data (deliveredAt 기반 개별 전달)
   const dynamicEvents: CalendarEvent[] = React.useMemo(() => {
     return allContents.map((c) => {
       const status = computeClientStatus(c, todayStr)
       let eventType: EventType = "기획서 전달"
+      let eventDate = c.publishedAt
+
       if (status === "업로드 완료") eventType = "업로드 완료"
       else if (status === "업로드 대기") eventType = "업로드 대기"
-      else if (status === "제작완료") eventType = "콘텐츠 전달"
-      else if (status === "제작중") eventType = "콘텐츠 전달"
-      else if (status === "기획완료") eventType = "기획서 전달"
+      else if (status === "수정 요청" || status === "수정완료") {
+        eventType = "콘텐츠 전달"
+        eventDate = c.contentDeliveredAt ?? c.publishedAt
+      }
+      else if (status === "제작완료") {
+        eventType = "콘텐츠 전달"
+        eventDate = c.contentDeliveredAt ?? c.publishedAt
+      }
+      else if (status === "제작중") {
+        eventType = "콘텐츠 전달"
+        eventDate = c.contentDeliveredAt ?? c.publishedAt
+      }
+      else if (status === "기획완료") {
+        eventType = "기획서 전달"
+        eventDate = c.planningDeliveredAt ?? c.publishedAt
+      }
 
       return {
         id: c.id,
-        date: c.publishedAt,
+        date: eventDate,
         type: eventType,
         title: c.title,
         sprint: `Sp.${c.sprint}`,
-        href: status === "기획완료" ? `/planning/${c.id}` : status === "제작완료" ? `/content/${c.id}` : undefined,
+        href: status === "기획완료" ? `/planning/${c.id}` : (status === "제작완료" || status === "수정 요청" || status === "수정완료") ? `/content/${c.id}` : undefined,
       }
     })
   }, [todayStr])
