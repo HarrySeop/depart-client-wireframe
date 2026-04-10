@@ -1,6 +1,14 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { SidebarInset } from "@/components/ui/sidebar"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardContent } from "@/components/dashboard-content"
 import { DashboardContentB } from "@/components/dashboard-content-b"
@@ -12,9 +20,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { useSimulatedDate } from "@/lib/simulated-date-context"
 import { sprints } from "@/lib/mock-data/contents"
 
-function formatSprintHeader(todayStr: string) {
-  const sprint = sprints.find((s) => todayStr >= s.startDate && todayStr <= s.endDate)
-  if (!sprint) return ""
+function formatSprintLabel(sprint: (typeof sprints)[number]) {
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"]
   const start = new Date(sprint.startDate + "T00:00:00")
   const end = new Date(sprint.endDate + "T00:00:00")
@@ -30,7 +36,15 @@ function formatSprintHeader(todayStr: string) {
 export default function DashboardPage() {
   const { todayStr } = useSimulatedDate()
   const { variant } = useDesignVariant()
-  const sprintHeader = formatSprintHeader(todayStr)
+
+  const currentSprintId = sprints.find((s) => todayStr >= s.startDate && todayStr <= s.endDate)?.id ?? sprints[sprints.length - 1].id
+  const [manualSprintId, setManualSprintId] = useState<number | null>(null)
+  const selectedSprintId = manualSprintId ?? currentSprintId
+
+  // Reset manual selection when simulated date changes
+  useEffect(() => {
+    setManualSprintId(null)
+  }, [todayStr])
 
   return (
     <>
@@ -40,9 +54,18 @@ export default function DashboardPage() {
           <div className="flex-1 flex items-center justify-between">
             <div className="hidden md:flex items-center gap-3">
               <h1 className="text-lg font-semibold">작업 현황</h1>
-              <span className="text-sm text-muted-foreground">
-                {sprintHeader}
-              </span>
+              <Select value={String(selectedSprintId)} onValueChange={(v) => setManualSprintId(Number(v))}>
+                <SelectTrigger size="sm" className="w-auto gap-1.5 border-none shadow-none text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...sprints].reverse().map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {formatSprintLabel(s)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="md:hidden flex items-center gap-3">
               <h1 className="text-base font-semibold">작업 현황</h1>
@@ -51,14 +74,23 @@ export default function DashboardPage() {
         </PageHeader>
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <div className="md:hidden mb-4">
-            <span className="text-sm text-muted-foreground">
-              {sprintHeader}
-            </span>
+            <Select value={String(selectedSprintId)} onValueChange={(v) => setManualSprintId(Number(v))}>
+              <SelectTrigger size="sm" className="w-auto gap-1.5 text-sm text-muted-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[...sprints].reverse().map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {formatSprintLabel(s)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          {variant === "A" && <DashboardContent />}
-          {variant === "B" && <DashboardContentB />}
-          {variant === "C" && <DashboardContentC />}
-          {variant === "D" && <DashboardContentD />}
+          {variant === "A" && <DashboardContent selectedSprint={selectedSprintId} />}
+          {variant === "B" && <DashboardContentB selectedSprint={selectedSprintId} />}
+          {variant === "C" && <DashboardContentC selectedSprint={selectedSprintId} />}
+          {variant === "D" && <DashboardContentD selectedSprint={selectedSprintId} />}
         </main>
       </SidebarInset>
       <Toaster />

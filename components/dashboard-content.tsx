@@ -7,8 +7,8 @@ import type { TaskCardProps } from "./task-card"
 import type { StatusType } from "./status-badge"
 import { useSimulatedDate } from "@/lib/simulated-date-context"
 import {
-  getVisiblePlanningItems,
-  getVisibleContentItems,
+  allContents,
+  computeClientStatus,
   getDashboardItems,
   getPlanningConfirmWindow,
   getContentConfirmWindow,
@@ -26,26 +26,36 @@ function formatDeadline(dateStr: string, hour: string) {
   return `${d.getMonth() + 1}/${d.getDate()}(${dayNames[d.getDay()]}) ${hour}`
 }
 
-export function DashboardContent() {
+export function DashboardContent({ selectedSprint }: { selectedSprint: number }) {
   const { todayStr } = useSimulatedDate()
   const currentSprint = getSprintForDate(todayStr)
   const dashData = React.useMemo(() => getDashboardItems(todayStr), [todayStr])
 
-  // Compute visible items based on sprint pipeline + simulated date
+  // Get all items for the selected sprint, grouped by computed status
+  const sprintItems = React.useMemo(
+    () => allContents.filter((c) => c.sprint === selectedSprint),
+    [selectedSprint]
+  )
+
   const contentConfirmItems = React.useMemo(() => {
-    return getVisibleContentItems(todayStr).map((c): TaskCardProps => ({
-      id: c.id,
-      status: "제작완료" as StatusType,
-      title: c.title,
-      sprintInfo: `→ Sp.${c.sprint} 업로드`,
-      builder: c.designerName,
-      builderLabel: "파트너",
-      href: `/content/${c.id}`,
-    }))
-  }, [todayStr])
+    return sprintItems
+      .filter((c) => {
+        const s = computeClientStatus(c, todayStr)
+        return s === "제작완료" || s === "수정 요청" || s === "수정완료"
+      })
+      .map((c): TaskCardProps => ({
+        id: c.id,
+        status: computeClientStatus(c, todayStr) as StatusType,
+        title: c.title,
+        sprintInfo: `→ Sp.${c.sprint} 업로드`,
+        builder: c.designerName,
+        builderLabel: "파트너",
+        href: `/content/${c.id}`,
+      }))
+  }, [sprintItems, todayStr])
 
   const planningConfirmItems = React.useMemo(() => {
-    return getVisiblePlanningItems(todayStr).map((c): TaskCardProps => ({
+    return dashData.planningConfirm.map((c): TaskCardProps => ({
       id: c.id,
       status: "기획완료" as StatusType,
       title: c.title,
@@ -53,28 +63,27 @@ export function DashboardContent() {
       builder: c.builderName,
       href: `/planning/${c.id}`,
     }))
-  }, [todayStr])
+  }, [dashData.planningConfirm])
 
-  // Compute deadlines from the visible items' sprint windows
+  // Compute deadlines from the selected sprint's windows
   const contentDeadline = React.useMemo(() => {
-    const items = getVisibleContentItems(todayStr)
-    if (items.length === 0) return ""
-    const w = getContentConfirmWindow(items[0].sprint)
+    if (contentConfirmItems.length === 0) return ""
+    const w = getContentConfirmWindow(selectedSprint)
     return w ? formatDeadline(w.end, "12:00") : ""
-  }, [todayStr])
+  }, [contentConfirmItems.length, selectedSprint])
 
   const planningDeadline = React.useMemo(() => {
-    const items = getVisiblePlanningItems(todayStr)
-    if (items.length === 0) return ""
-    const w = getPlanningConfirmWindow(items[0].sprint)
+    if (dashData.planningConfirm.length === 0) return ""
+    const targetSprint = dashData.planningConfirm[0].sprint
+    const w = getPlanningConfirmWindow(targetSprint)
     return w ? formatDeadline(w.end, "15:00") : ""
-  }, [todayStr])
+  }, [dashData.planningConfirm])
 
   // State for overriding statuses (after user actions)
   const [contentTasks, setContentTasks] = React.useState(contentConfirmItems)
   const [planningTasks, setPlanningTasks] = React.useState(planningConfirmItems)
 
-  // Sync when simulated date changes
+  // Sync when simulated date or selected sprint changes
   React.useEffect(() => {
     setContentTasks(contentConfirmItems)
     setPlanningTasks(planningConfirmItems)
@@ -83,10 +92,10 @@ export function DashboardContent() {
 
   // Compute subtitle sprints
   const contentSubtitle = contentConfirmItems.length > 0
-    ? `→ Sp.${getVisibleContentItems(todayStr)[0]?.sprint} 업로드 예정`
+    ? `→ Sp.${selectedSprint} 업로드 예정`
     : ""
-  const planningSubtitle = planningConfirmItems.length > 0
-    ? `→ Sp.${getVisiblePlanningItems(todayStr)[0]?.sprint} 제작용`
+  const planningSubtitle = dashData.planningConfirm.length > 0
+    ? `→ Sp.${dashData.planningConfirm[0].sprint} 제작용`
     : ""
 
   const handleContentConfirmAll = (taskIds: string[]) => {

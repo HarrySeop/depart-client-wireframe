@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { useSimulatedDate } from "@/lib/simulated-date-context"
 import {
+  allContents,
+  computeClientStatus,
   getDashboardItems,
   getNextDeliveryBadge,
   getPlanningConfirmWindow,
@@ -28,11 +30,25 @@ function formatDeadline(dateStr: string, hour: string) {
   return `${d.getMonth() + 1}/${d.getDate()}(${dayNames[d.getDay()]}) ${hour}`
 }
 
-export function DashboardContentB() {
+export function DashboardContentB({ selectedSprint }: { selectedSprint: number }) {
   const { todayStr } = useSimulatedDate()
   const currentSprint = getSprintForDate(todayStr)
 
-  const data = React.useMemo(() => getDashboardItems(todayStr), [todayStr])
+  const rawData = React.useMemo(() => getDashboardItems(todayStr), [todayStr])
+  const sprintItems = React.useMemo(
+    () => allContents.filter((c) => c.sprint === selectedSprint),
+    [selectedSprint]
+  )
+  const data = React.useMemo(() => {
+    // planningConfirm은 rawData (getDashboardItems) 결과 사용 — cross-sprint 기획서 표시
+    const contentConfirm = sprintItems.filter((c) => {
+      const s = computeClientStatus(c, todayStr)
+      return s === "제작완료" || s === "수정 요청" || s === "수정완료"
+    })
+    const uploadPending = sprintItems.filter((c) => computeClientStatus(c, todayStr) === "업로드 대기")
+    const uploadComplete = sprintItems.filter((c) => computeClientStatus(c, todayStr) === "업로드 완료")
+    return { ...rawData, contentConfirm, uploadPending, uploadComplete }
+  }, [rawData, sprintItems, todayStr])
 
   const hasPlanningConfirm = data.planningConfirm.length > 0
   const hasContentConfirm = data.contentConfirm.length > 0
