@@ -11,13 +11,13 @@ import { allContents, sprints as sprintDefs, computeClientStatus } from "@/lib/m
 
 // Event types with colors
 const eventColors = {
-  "기획서 전달": "#5f86fb",
-  "기획서 컨펌 마감": "#5f86fb",
-  "콘텐츠 전달": "#8575e5",
-  "콘텐츠 컨펌 마감": "#8575e5",
+  "기획완료": "#5f86fb",
+  "수정 요청": "#dd3d2e",
+  "제작중": "#949494",
+  "제작완료": "#8575e5",
   "업로드 대기": "#e49e28",
   "업로드 완료": "#59b160",
-  "컨펌 보류 이월": "#dd3d2e",
+  "수정 요청(이월)": "#dd3d2e",
 } as const
 
 type EventType = keyof typeof eventColors
@@ -47,7 +47,7 @@ function EventCard({ event }: { event: CalendarEvent }) {
   const cardContent = (
     <div
       className="rounded-md px-1.5 py-1 text-[11px] leading-tight cursor-pointer transition-opacity hover:opacity-80 space-y-0.5 border-l-2"
-      style={{ borderLeftColor: color, backgroundColor: `${color}10` }}
+      style={{ borderLeftColor: color }}
     >
       {/* Line 1: Title */}
       <p className="font-medium truncate text-foreground/90">{shortTitle}</p>
@@ -368,35 +368,23 @@ export function CalendarView() {
   const goToNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
   const goToToday = () => setCurrentDate(today)
 
-  // Generate events from content data (deliveredAt 기반 개별 전달)
+  // Generate events from content data (카드 위치는 항상 publishedAt 고정)
   const dynamicEvents: CalendarEvent[] = React.useMemo(() => {
     return allContents.map((c) => {
       const status = computeClientStatus(c, todayStr)
-      let eventType: EventType = "기획서 전달"
-      let eventDate = c.publishedAt
+      let eventType: EventType = "기획완료"
 
       if (status === "업로드 완료") eventType = "업로드 완료"
       else if (status === "업로드 대기") eventType = "업로드 대기"
-      else if (status === "수정 요청" || status === "수정완료") {
-        eventType = "콘텐츠 전달"
-        eventDate = c.contentDeliveredAt ?? c.publishedAt
-      }
-      else if (status === "제작완료") {
-        eventType = "콘텐츠 전달"
-        eventDate = c.contentDeliveredAt ?? c.publishedAt
-      }
-      else if (status === "제작중") {
-        eventType = "콘텐츠 전달"
-        eventDate = c.contentDeliveredAt ?? c.publishedAt
-      }
-      else if (status === "기획완료") {
-        eventType = "기획서 전달"
-        eventDate = c.planningDeliveredAt ?? c.publishedAt
-      }
+      else if (status === "수정 요청") eventType = "수정 요청"
+      else if (status === "수정완료") eventType = "제작완료"
+      else if (status === "제작완료") eventType = "제작완료"
+      else if (status === "제작중") eventType = "제작중"
+      else if (status === "기획완료") eventType = "기획완료"
 
       return {
         id: c.id,
-        date: eventDate,
+        date: c.publishedAt,
         type: eventType,
         title: c.title,
         sprint: `Sp.${c.sprint}`,

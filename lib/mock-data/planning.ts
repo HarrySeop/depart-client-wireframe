@@ -7,11 +7,34 @@ const planningContentMap: Record<string, Pick<PlanningData, "captions" | "hashta
   // #66 - 여름 출근룩, 격식과 편안함 사이에서
   "879": {
     captions: [
-      { id: "1", label: "캡션 1 (썸네일)", original: "여름 출근룩, 매일 고민되시나요?" },
+      {
+        id: "1",
+        label: "캡션 1 (썸네일)",
+        original: "여름 출근룩, 매일 고민되시나요?",
+        designRequest: "- 썸네일용 강한 비주얼\n- 밝은 톤, 시원한 느낌\n- 타이틀 텍스트 공간 확보",
+        designReferenceImages: [
+          { src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop", alt: "여름 오피스룩 레퍼런스 1" },
+          { src: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop", alt: "여름 오피스룩 레퍼런스 2" },
+        ],
+        attachmentUrl: "https://www.pinterest.com/summer-office-inspo",
+      },
       { id: "2", label: "캡션 2", original: "에어컨 빵빵한 사무실과 찜통 같은 바깥, 둘 다 대비해야 합니다." },
-      { id: "3", label: "캡션 3", original: "격식을 갖추면서도 시원한 소재를 선택하는 것이 핵심입니다." },
+      {
+        id: "3",
+        label: "캡션 3",
+        original: "격식을 갖추면서도 시원한 소재를 선택하는 것이 핵심입니다.",
+        designRequest: "- 소재 클로즈업 컷\n- 냉감 소재 질감 강조",
+        designReferenceImages: [
+          { src: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=400&fit=crop", alt: "소재 클로즈업 레퍼런스" },
+        ],
+      },
       { id: "4", label: "캡션 4", original: "얇은 울 블렌드 슬랙스는 냉방과 더위 모두에 대응할 수 있습니다." },
-      { id: "5", label: "캡션 5", original: "셔츠 대신 니트 폴로를 매치하면 캐주얼하면서도 단정한 인상을 줍니다." },
+      {
+        id: "5",
+        label: "캡션 5",
+        original: "셔츠 대신 니트 폴로를 매치하면 캐주얼하면서도 단정한 인상을 줍니다.",
+        attachmentUrl: "https://example.com/knit-polo-guide",
+      },
       { id: "6", label: "캡션 6", original: "올여름, 출근길에서도 스타일을 포기하지 마세요." },
     ],
     hashtags: ["#모레노", "#여름출근룩", "#오피스룩", "#슬랙스코디", "#남자여름패션"],

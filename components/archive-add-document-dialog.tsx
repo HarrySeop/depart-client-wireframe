@@ -50,7 +50,7 @@ export function ArchiveAddDocumentDialog({
   const isValid = name.trim().length > 0
 
   const addLink = () => {
-    if (links.length < 4) setLinks([...links, ""])
+    setLinks([...links, ""])
   }
 
   const updateLink = (index: number, value: string) => {
@@ -79,7 +79,7 @@ export function ArchiveAddDocumentDialog({
     <div className="space-y-4 px-1">
       {/* 이름 (필수) */}
       <div className="space-y-2">
-        <Label htmlFor="doc-name">이름</Label>
+        <Label htmlFor="doc-name">이름 <span className="text-red-500">*</span></Label>
         <Input
           id="doc-name"
           placeholder="자료 이름을 입력하세요"
@@ -91,7 +91,7 @@ export function ArchiveAddDocumentDialog({
       {/* 설명 (선택, 최대 100자) */}
       <div className="space-y-2">
         <Label htmlFor="doc-description">
-          설명 <span className="text-muted-foreground font-normal">(선택, 최대 100자)</span>
+          설명 <span className="text-muted-foreground font-normal">(최대 100자)</span>
         </Label>
         <Textarea
           id="doc-description"
@@ -110,7 +110,7 @@ export function ArchiveAddDocumentDialog({
       {/* 링크 (선택, 최대 4개) */}
       <div className="space-y-2">
         <Label>
-          링크 <span className="text-muted-foreground font-normal">(최대 4개)</span>
+          링크
         </Label>
         <div className="space-y-2">
           {links.map((link, index) => (
@@ -134,8 +134,7 @@ export function ArchiveAddDocumentDialog({
               )}
             </div>
           ))}
-          {links.length < 4 && (
-            <Button
+          <Button
               type="button"
               variant="ghost"
               size="sm"
@@ -145,7 +144,6 @@ export function ArchiveAddDocumentDialog({
               <Plus className="size-4 mr-1" />
               링크 추가
             </Button>
-          )}
         </div>
       </div>
     </div>

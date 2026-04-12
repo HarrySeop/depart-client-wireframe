@@ -21,16 +21,16 @@ import { WEEKDAYS, formatDate, isInSprint, getSprintForDate, getMonthDays } from
 
 // ─── Constants ───────────────────────────────────────────────
 
-const BRAND_TEAL = "#14B8A6"
+const BRAND_TEAL = "#ec4899"
 
 const productionEventColors = {
-  "기획서 전달": "#5f86fb",
-  "기획서 컨펌 마감": "#5f86fb",
-  "콘텐츠 전달": "#8575e5",
-  "콘텐츠 컨펌 마감": "#8575e5",
+  "기획완료": "#5f86fb",
+  "수정 요청": "#dd3d2e",
+  "제작중": "#949494",
+  "제작완료": "#8575e5",
   "업로드 대기": "#e49e28",
   "업로드 완료": "#59b160",
-  "컨펌 보류 이월": "#dd3d2e",
+  "수정 요청(이월)": "#dd3d2e",
 } as const
 
 type ProductionEventType = keyof typeof productionEventColors
@@ -67,8 +67,8 @@ function ProductionEventCard({ event }: { event: ProductionEvent }) {
 
   const cardContent = (
     <div
-      className="rounded-md px-1.5 py-1 text-[11px] leading-tight cursor-pointer transition-opacity hover:opacity-80 space-y-0.5"
-      style={{ backgroundColor: `${color}15` }}
+      className="rounded-md px-1.5 py-1 text-[11px] leading-tight cursor-pointer transition-opacity hover:opacity-80 space-y-0.5 border-l-2"
+      style={{ borderLeftColor: color }}
     >
       <div className="flex items-center gap-1">
         <span
@@ -157,7 +157,7 @@ function UnifiedBrandEventCard({
       <PopoverTrigger asChild>
         <div
           className="rounded-md px-1.5 py-1 text-[11px] leading-tight cursor-pointer transition-opacity hover:opacity-80 space-y-0.5"
-          style={{ backgroundColor: `${BRAND_TEAL}15` }}
+          style={{ backgroundColor: `${BRAND_TEAL}30` }}
         >
           <div className="flex items-center gap-1">
             <span
@@ -580,36 +580,24 @@ export function UnifiedCalendarView() {
     setBrandEvents((prev) => prev.filter((e) => e.id !== id))
   }
 
-  // Generate production events
+  // Generate production events (카드 위치는 항상 publishedAt 고정)
   const productionEvents: ProductionEvent[] = React.useMemo(() => {
     return allContents.map((c) => {
       const status = computeClientStatus(c, todayStr)
-      let eventType: ProductionEventType = "기획서 전달"
-      let eventDate = c.publishedAt
+      let eventType: ProductionEventType = "기획완료"
 
       if (status === "업로드 완료") eventType = "업로드 완료"
       else if (status === "업로드 대기") eventType = "업로드 대기"
-      else if (status === "수정 요청" || status === "수정완료") {
-        eventType = "콘텐츠 전달"
-        eventDate = c.contentDeliveredAt ?? c.publishedAt
-      }
-      else if (status === "제작완료") {
-        eventType = "콘텐츠 전달"
-        eventDate = c.contentDeliveredAt ?? c.publishedAt
-      }
-      else if (status === "제작중") {
-        eventType = "콘텐츠 전달"
-        eventDate = c.contentDeliveredAt ?? c.publishedAt
-      }
-      else if (status === "기획완료") {
-        eventType = "기획서 전달"
-        eventDate = c.planningDeliveredAt ?? c.publishedAt
-      }
+      else if (status === "수정 요청") eventType = "수정 요청"
+      else if (status === "수정완료") eventType = "제작완료"
+      else if (status === "제작완료") eventType = "제작완료"
+      else if (status === "제작중") eventType = "제작중"
+      else if (status === "기획완료") eventType = "기획완료"
 
       return {
         source: "production" as const,
         id: c.id,
-        date: eventDate,
+        date: c.publishedAt,
         type: eventType,
         title: c.title,
         sprint: `Sp.${c.sprint}`,

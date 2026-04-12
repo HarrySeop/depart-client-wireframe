@@ -11,7 +11,7 @@ import { sprints as sprintDefs } from "@/lib/mock-data/contents"
 import { initialBrandEvents, type BrandEvent } from "@/lib/mock-data/brand-calendar"
 import { BrandEventDialog } from "@/components/brand-event-dialog"
 
-const BRAND_COLOR = "#5f86fb"
+const BRAND_COLOR = "#ec4899"
 
 type EventPosition = "single" | "start" | "middle" | "end"
 
@@ -41,8 +41,8 @@ function BrandEventCard({
     <Popover>
       <PopoverTrigger asChild>
         <div
-          className="rounded-md px-1.5 py-1 text-[11px] leading-tight cursor-pointer transition-opacity hover:opacity-80 space-y-0.5 border-l-2"
-          style={{ borderLeftColor: BRAND_COLOR, backgroundColor: `${BRAND_COLOR}10` }}
+          className="rounded-md px-1.5 py-1 text-[11px] leading-tight cursor-pointer transition-opacity hover:opacity-80 space-y-0.5"
+          style={{ backgroundColor: `${BRAND_COLOR}30` }}
         >
           <p className="font-medium truncate text-foreground/90">{shortTitle}</p>
           <div className="flex items-center justify-between gap-1">

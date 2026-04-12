@@ -50,21 +50,35 @@ export function PlanningDetail({ id }: { id: string }) {
   const [planningData, setPlanningData] = React.useState(initialPlanningData)
   const [editedData, setEditedData] = React.useState(initialPlanningData)
   const [originalData] = React.useState(initialPlanningData)
-  const [captionEditMode, setCaptionEditMode] = React.useState<"A" | "B" | "C" | "D" | "E" | "F">("A")
+  const [captionEditMode, setCaptionEditMode] = React.useState<"A" | "B" | "C" | "D" | "E" | "F" | "G" | "H">("A")
 
   // Derived state
   const hasEditChanges = JSON.stringify(editedData) !== JSON.stringify(planningData)
   const hasUnsavedChanges = hasEditChanges
 
   // Split view logic
-  const isSplitMode = captionEditMode <= "D"
+  const isNewAB = captionEditMode === "A" || captionEditMode === "B"
+  const isSplitMode = captionEditMode <= "F"
   const showSplitView = (status === "수정 요청" || isEditMode) && isSplitMode
-  const diffStyle = (captionEditMode === "B" || captionEditMode === "D") ? "background" as const : "strikethrough" as const
+  const diffStyle = (captionEditMode === "A" || captionEditMode === "B" || captionEditMode === "D" || captionEditMode === "F") ? "background" as const : "strikethrough" as const
   const internalCaptionEditMode =
-    (captionEditMode === "A" || captionEditMode === "B") ? "D" as const :
-    (captionEditMode === "C" || captionEditMode === "D") ? "A" as const :
-    captionEditMode === "E" ? "A" as const :
+    (captionEditMode === "C" || captionEditMode === "D") ? "D" as const :
+    (captionEditMode === "E" || captionEditMode === "F") ? "A" as const :
+    captionEditMode === "G" ? "A" as const :
     "D" as const
+  const layoutVariant: "default" | "interleaved" | "grouped" =
+    captionEditMode === "A" ? "interleaved" :
+    captionEditMode === "B" ? "grouped" :
+    "default"
+
+  // Caption design request collapse state (A안 토글 싱크)
+  const [openCaptionRequests, setOpenCaptionRequests] = React.useState<Record<string, boolean>>({})
+  const handleToggleCaptionRequest = React.useCallback((captionId: string) => {
+    setOpenCaptionRequests((prev) => ({
+      ...prev,
+      [captionId]: !(prev[captionId] ?? true),
+    }))
+  }, [])
 
   // Modals
   const [approveModalOpen, setApproveModalOpen] = React.useState(false)
@@ -193,17 +207,19 @@ export function PlanningDetail({ id }: { id: string }) {
             </>
           ) : (
             <>
-              <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B" | "C" | "D" | "E" | "F")}>
+              <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H")}>
                 <SelectTrigger size="sm" className="w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="A">A안 (직접편집·취소선)</SelectItem>
-                  <SelectItem value="B">B안 (직접편집·빨강/초록)</SelectItem>
-                  <SelectItem value="C">C안 (프리뷰·취소선)</SelectItem>
-                  <SelectItem value="D">D안 (프리뷰·빨강/초록)</SelectItem>
-                  <SelectItem value="E">E안 (상하수정)</SelectItem>
-                  <SelectItem value="F">F안 (폼수정)</SelectItem>
+                  <SelectItem value="A">A안 (캡션별)</SelectItem>
+                  <SelectItem value="B">B안 (요청사항 하단)</SelectItem>
+                  <SelectItem value="C">C안 (직접편집·취소선)</SelectItem>
+                  <SelectItem value="D">D안 (직접편집·빨강/초록)</SelectItem>
+                  <SelectItem value="E">E안 (프리뷰·취소선)</SelectItem>
+                  <SelectItem value="F">F안 (프리뷰·빨강/초록)</SelectItem>
+                  <SelectItem value="G">G안 (상하수정)</SelectItem>
+                  <SelectItem value="H">H안 (폼수정)</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm" onClick={handleCancel}>
@@ -231,9 +247,14 @@ export function PlanningDetail({ id }: { id: string }) {
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <PlanningContent
-                    data={originalData}
+                    data={isNewAB && isEditMode ? editedData : originalData}
                     isEditMode={false}
                     panelRole="original"
+                    showDiff={isNewAB && isEditMode}
+                    diffStyle={diffStyle}
+                    layoutVariant={layoutVariant}
+                    openCaptionRequests={openCaptionRequests}
+                    onToggleCaptionRequest={handleToggleCaptionRequest}
                     onImageClick={openImageViewer}
                   />
                 </div>
@@ -247,9 +268,13 @@ export function PlanningDetail({ id }: { id: string }) {
                   <PlanningContent
                     data={isEditMode ? editedData : planningData}
                     isEditMode={isEditMode}
-                    captionEditMode={internalCaptionEditMode}
+                    captionEditMode={isNewAB ? undefined : internalCaptionEditMode}
                     diffStyle={diffStyle}
                     panelRole="modified"
+                    formOnly={isNewAB}
+                    layoutVariant={layoutVariant}
+                    openCaptionRequests={openCaptionRequests}
+                    onToggleCaptionRequest={handleToggleCaptionRequest}
                     onDataChange={setEditedData}
                     onImageClick={openImageViewer}
                   />

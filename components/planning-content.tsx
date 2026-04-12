@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Download, FileText, Image as ImageIcon } from "lucide-react"
+import { ChevronDown, ChevronRight, Download, FileText, Image as ImageIcon, Link as LinkIcon } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
@@ -11,6 +11,10 @@ interface CaptionData {
   label: string
   original: string
   edited?: string
+  // 캡션 레벨 디자인 요청사항 (새 A/B안 전용, optional)
+  designRequest?: string
+  designReferenceImages?: { src: string; alt: string }[]
+  attachmentUrl?: string
 }
 
 interface PlanningData {
@@ -30,11 +34,16 @@ interface PlanningData {
 interface PlanningContentProps {
   data: PlanningData
   isEditMode: boolean
-  captionEditMode?: "A" | "B" | "C" | "D" | "E" | "F"
+  captionEditMode?: "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H"
   onDataChange?: (data: PlanningData) => void
   onImageClick?: (images: { src: string; alt: string }[], index: number) => void
   panelRole?: "original" | "modified"
   diffStyle?: "strikethrough" | "background"
+  showDiff?: boolean
+  formOnly?: boolean
+  layoutVariant?: "default" | "interleaved" | "grouped"
+  openCaptionRequests?: Record<string, boolean>
+  onToggleCaptionRequest?: (captionId: string) => void
 }
 
 // Inline diff component — shows deleted (strikethrough) and added (underline) in same line
@@ -161,6 +170,107 @@ function TrackedTextBg({
   )
 }
 
+// 캡션 레벨 디자인 요청사항 카드 (새 A/B안 전용, 읽기 전용)
+function CaptionDesignRequestCard({
+  caption,
+  collapsible = false,
+  isOpen = true,
+  onToggle,
+  onImageClick,
+}: {
+  caption: CaptionData
+  collapsible?: boolean
+  isOpen?: boolean
+  onToggle?: () => void
+  onImageClick?: (images: { src: string; alt: string }[], index: number) => void
+}) {
+  const hasContent =
+    !!caption.designRequest ||
+    (caption.designReferenceImages && caption.designReferenceImages.length > 0) ||
+    !!caption.attachmentUrl
+
+  if (!hasContent) return null
+
+  const headerLabel = `${caption.label} 디자인 요청사항`
+  const refImages = caption.designReferenceImages ?? []
+
+  return (
+    <section className="rounded-lg bg-card border border-border p-4 min-w-0">
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          className="flex items-center gap-1 w-full text-left mb-2 hover:opacity-80 transition-opacity"
+        >
+          {isOpen ? (
+            <ChevronDown className="size-3.5 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="size-3.5 text-muted-foreground shrink-0" />
+          )}
+          <span className="text-xs font-medium text-muted-foreground">
+            {headerLabel}
+          </span>
+        </button>
+      ) : (
+        <h3 className="text-xs font-medium text-muted-foreground mb-2">
+          {headerLabel}
+        </h3>
+      )}
+
+      {(!collapsible || isOpen) && (
+        <div className="space-y-3">
+          {caption.designRequest && (
+            <p className="text-sm leading-relaxed whitespace-pre-line">
+              {caption.designRequest}
+            </p>
+          )}
+
+          {refImages.length > 0 && (
+            <div>
+              <div className="text-xs font-medium text-muted-foreground mb-1.5">
+                레퍼런스 이미지
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {refImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => onImageClick?.(refImages, idx)}
+                    className="relative w-20 h-20 rounded-md overflow-hidden border border-border hover:border-muted-foreground/50 transition-colors shrink-0"
+                  >
+                    <img
+                      src={img.src}
+                      alt={img.alt}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {caption.attachmentUrl && (
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-muted-foreground mb-1.5">
+                첨부 링크
+              </div>
+              <a
+                href={caption.attachmentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline max-w-full"
+              >
+                <LinkIcon className="size-3.5 shrink-0" />
+                <span className="truncate">{caption.attachmentUrl}</span>
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
 export function PlanningContent({
   data,
   isEditMode,
@@ -169,6 +279,11 @@ export function PlanningContent({
   onImageClick,
   panelRole,
   diffStyle = "strikethrough",
+  showDiff = false,
+  formOnly = false,
+  layoutVariant = "default",
+  openCaptionRequests,
+  onToggleCaptionRequest,
 }: PlanningContentProps) {
   const updateTitle = (value: string) => {
     if (!onDataChange) return
@@ -196,9 +311,25 @@ export function PlanningContent({
             기획안 제목
           </h3>
           {panelRole === "original" ? (
-            <p className="text-lg font-medium">{data.title}</p>
+            showDiff && data.editedTitle && data.editedTitle !== data.title ? (
+              <p className="text-lg font-medium">
+                <DiffComponent
+                  original={data.title}
+                  edited={data.editedTitle}
+                />
+              </p>
+            ) : (
+              <p className="text-lg font-medium">{data.title}</p>
+            )
           ) : isEditMode && panelRole === "modified" ? (
-            captionEditMode === "D" ? (
+            formOnly ? (
+              <Textarea
+                value={data.editedTitle ?? data.title}
+                onChange={(e) => updateTitle(e.target.value)}
+                className="min-h-[40px] text-lg font-medium resize-none"
+                placeholder="수정할 제목을 입력하세요..."
+              />
+            ) : captionEditMode === "D" ? (
               <div className="relative min-h-[40px]">
                 <div
                   className="text-lg font-medium leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap break-words min-h-[40px]"
@@ -315,17 +446,33 @@ export function PlanningContent({
 
         {/* Captions */}
         {data.captions.map((caption) => (
+          <React.Fragment key={caption.id}>
           <section
-            key={caption.id}
             className="rounded-lg bg-card border border-border p-4"
           >
             <h3 className="text-xs font-medium text-muted-foreground mb-2">
               {caption.label}
             </h3>
             {panelRole === "original" ? (
-              <p className="text-sm leading-relaxed">{caption.original}</p>
+              showDiff && caption.edited && caption.edited !== caption.original ? (
+                <p className="text-sm leading-relaxed">
+                  <DiffComponent
+                    original={caption.original}
+                    edited={caption.edited}
+                  />
+                </p>
+              ) : (
+                <p className="text-sm leading-relaxed">{caption.original}</p>
+              )
             ) : isEditMode && panelRole === "modified" ? (
-              captionEditMode === "D" ? (
+              formOnly ? (
+                <Textarea
+                  value={caption.edited ?? caption.original}
+                  onChange={(e) => updateCaption(caption.id, e.target.value)}
+                  className="min-h-[60px] text-sm resize-none"
+                  placeholder="수정할 내용을 입력하세요..."
+                />
+              ) : captionEditMode === "D" ? (
                 <div className="relative min-h-[60px]">
                   <div
                     className="text-sm leading-relaxed p-3 rounded-md bg-muted/50 border border-border/50 whitespace-pre-wrap break-words min-h-[60px]"
@@ -421,6 +568,16 @@ export function PlanningContent({
               </p>
             )}
           </section>
+          {layoutVariant === "interleaved" && (
+            <CaptionDesignRequestCard
+              caption={caption}
+              collapsible
+              isOpen={openCaptionRequests?.[caption.id] ?? true}
+              onToggle={() => onToggleCaptionRequest?.(caption.id)}
+              onImageClick={onImageClick}
+            />
+          )}
+          </React.Fragment>
         ))}
 
         {/* Hashtags */}
@@ -458,15 +615,27 @@ export function PlanningContent({
           </div>
         </section>
 
-        {/* Design Request */}
-        <section className="rounded-lg bg-card border border-border p-4">
-          <h3 className="text-xs font-medium text-muted-foreground mb-2">
-            디자인 요청사항
-          </h3>
-          <p className="text-sm leading-relaxed whitespace-pre-line">
-            {data.designRequest}
-          </p>
-        </section>
+        {/* Grouped caption design requests (B안) */}
+        {layoutVariant === "grouped" &&
+          data.captions.map((caption) => (
+            <CaptionDesignRequestCard
+              key={`req-${caption.id}`}
+              caption={caption}
+              onImageClick={onImageClick}
+            />
+          ))}
+
+        {/* Design Request (문서 레벨, default 레이아웃 전용) */}
+        {layoutVariant === "default" && (
+          <section className="rounded-lg bg-card border border-border p-4">
+            <h3 className="text-xs font-medium text-muted-foreground mb-2">
+              디자인 요청사항
+            </h3>
+            <p className="text-sm leading-relaxed whitespace-pre-line">
+              {data.designRequest}
+            </p>
+          </section>
+        )}
 
         {/* Selected Template Images */}
         {data.selectedTemplateImages && data.selectedTemplateImages.length > 0 && (
@@ -494,54 +663,56 @@ export function PlanningContent({
           </section>
         )}
 
-        {/* Reference Files */}
-        <section className="rounded-lg bg-card border border-border p-4">
-          <h3 className="text-xs font-medium text-muted-foreground mb-3">
-            레퍼런스 파일
-          </h3>
-          <div className="space-y-3">
-            {imageFiles.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                {imageFiles.map((file, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() =>
-                      onImageClick?.(
-                        imageFiles.map((f) => ({
-                          src: f.src || "/placeholder.svg",
-                          alt: f.name,
-                        })),
-                        idx
-                      )
-                    }
-                    className="relative w-20 h-20 rounded-md overflow-hidden border border-border hover:border-muted-foreground/50 transition-colors"
-                  >
-                    <img
-                      src={file.src || "/placeholder.svg"}
-                      alt={file.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors" />
-                  </button>
-                ))}
-              </div>
-            )}
-            {data.referenceFiles
-              .filter((f) => f.type === "file")
-              .map((file, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2 text-sm text-muted-foreground"
-                >
-                  <FileText className="size-4" />
-                  <span>{file.name}</span>
-                  <button className="ml-auto p-1 hover:text-foreground transition-colors">
-                    <Download className="size-4" />
-                  </button>
+        {/* Reference Files (문서 레벨, default 레이아웃 전용) */}
+        {layoutVariant === "default" && (
+          <section className="rounded-lg bg-card border border-border p-4">
+            <h3 className="text-xs font-medium text-muted-foreground mb-3">
+              레퍼런스 파일
+            </h3>
+            <div className="space-y-3">
+              {imageFiles.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {imageFiles.map((file, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() =>
+                        onImageClick?.(
+                          imageFiles.map((f) => ({
+                            src: f.src || "/placeholder.svg",
+                            alt: f.name,
+                          })),
+                          idx
+                        )
+                      }
+                      className="relative w-20 h-20 rounded-md overflow-hidden border border-border hover:border-muted-foreground/50 transition-colors"
+                    >
+                      <img
+                        src={file.src || "/placeholder.svg"}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors" />
+                    </button>
+                  ))}
                 </div>
-              ))}
-          </div>
-        </section>
+              )}
+              {data.referenceFiles
+                .filter((f) => f.type === "file")
+                .map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                  >
+                    <FileText className="size-4" />
+                    <span>{file.name}</span>
+                    <button className="ml-auto p-1 hover:text-foreground transition-colors">
+                      <Download className="size-4" />
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </section>
+        )}
       </div>
     </ScrollArea>
   )
