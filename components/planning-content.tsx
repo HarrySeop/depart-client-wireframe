@@ -44,6 +44,9 @@ interface PlanningContentProps {
   layoutVariant?: "default" | "interleaved" | "grouped"
   openCaptionRequests?: Record<string, boolean>
   onToggleCaptionRequest?: (captionId: string) => void
+  hideDesignSections?: boolean
+  registerCardRef?: (key: string, el: HTMLElement | null) => void
+  viewportRef?: React.Ref<HTMLDivElement>
 }
 
 // Inline diff component — shows deleted (strikethrough) and added (underline) in same line
@@ -284,6 +287,9 @@ export function PlanningContent({
   layoutVariant = "default",
   openCaptionRequests,
   onToggleCaptionRequest,
+  hideDesignSections = false,
+  registerCardRef,
+  viewportRef,
 }: PlanningContentProps) {
   const updateTitle = (value: string) => {
     if (!onDataChange) return
@@ -303,10 +309,13 @@ export function PlanningContent({
   const DiffComponent = diffStyle === "background" ? TrackedTextBg : TrackedText
 
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea className="h-full" viewportRef={viewportRef}>
       <div className="p-6 space-y-6">
         {/* Title Section */}
-        <section className="rounded-lg bg-card border border-border p-4">
+        <section
+          ref={(el) => registerCardRef?.("title", el)}
+          className="rounded-lg bg-card border border-border p-4"
+        >
           <h3 className="text-xs font-medium text-muted-foreground mb-2">
             기획안 제목
           </h3>
@@ -427,7 +436,10 @@ export function PlanningContent({
         </section>
 
         {/* Content Type + Builder + Sprint */}
-        <section className="rounded-lg bg-card border border-border p-4">
+        <section
+          ref={(el) => registerCardRef?.("contentType", el)}
+          className="rounded-lg bg-card border border-border p-4"
+        >
           <h3 className="text-xs font-medium text-muted-foreground mb-2">
             콘텐츠 타입
           </h3>
@@ -448,6 +460,7 @@ export function PlanningContent({
         {data.captions.map((caption) => (
           <React.Fragment key={caption.id}>
           <section
+            ref={(el) => registerCardRef?.(`caption-${caption.id}`, el)}
             className="rounded-lg bg-card border border-border p-4"
           >
             <h3 className="text-xs font-medium text-muted-foreground mb-2">
@@ -581,7 +594,10 @@ export function PlanningContent({
         ))}
 
         {/* Hashtags */}
-        <section className="rounded-lg bg-card border border-border p-4">
+        <section
+          ref={(el) => registerCardRef?.("hashtags", el)}
+          className="rounded-lg bg-card border border-border p-4"
+        >
           <h3 className="text-xs font-medium text-muted-foreground mb-3">
             해시태그
           </h3>
@@ -616,7 +632,7 @@ export function PlanningContent({
         </section>
 
         {/* Grouped caption design requests (B안) */}
-        {layoutVariant === "grouped" &&
+        {layoutVariant === "grouped" && !hideDesignSections &&
           data.captions.map((caption) => (
             <CaptionDesignRequestCard
               key={`req-${caption.id}`}
@@ -638,7 +654,7 @@ export function PlanningContent({
         )}
 
         {/* Selected Template Images */}
-        {data.selectedTemplateImages && data.selectedTemplateImages.length > 0 && (
+        {!hideDesignSections && data.selectedTemplateImages && data.selectedTemplateImages.length > 0 && (
           <section className="rounded-lg bg-card border border-border p-4">
             <h3 className="text-xs font-medium text-muted-foreground mb-3">
               선택된 디자인 템플릿

@@ -33,6 +33,8 @@ import { StatusBadge, type StatusType } from "./status-badge"
 import { PlanningContent } from "./planning-content"
 import { ImageViewer } from "./image-viewer"
 import { useIsMobile } from "@/components/ui/use-mobile"
+import { usePairedHeights } from "@/hooks/use-paired-heights"
+import { useSyncedScroll } from "@/hooks/use-synced-scroll"
 import { getPlanningDetailById } from "@/lib/mock-data"
 
 export function PlanningDetail({ id }: { id: string }) {
@@ -50,26 +52,31 @@ export function PlanningDetail({ id }: { id: string }) {
   const [planningData, setPlanningData] = React.useState(initialPlanningData)
   const [editedData, setEditedData] = React.useState(initialPlanningData)
   const [originalData] = React.useState(initialPlanningData)
-  const [captionEditMode, setCaptionEditMode] = React.useState<"A" | "B" | "C" | "D" | "E" | "F" | "G" | "H">("A")
+  const [captionEditMode, setCaptionEditMode] = React.useState<"A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J">("A")
 
   // Derived state
   const hasEditChanges = JSON.stringify(editedData) !== JSON.stringify(planningData)
   const hasUnsavedChanges = hasEditChanges
 
   // Split view logic
-  const isNewAB = captionEditMode === "A" || captionEditMode === "B"
-  const isSplitMode = captionEditMode <= "F"
+  const isNewAB = captionEditMode === "A" || captionEditMode === "B" || captionEditMode === "C" || captionEditMode === "D"
+  const isSplitMode = captionEditMode <= "H"
   const showSplitView = (status === "수정 요청" || isEditMode) && isSplitMode
-  const diffStyle = (captionEditMode === "A" || captionEditMode === "B" || captionEditMode === "D" || captionEditMode === "F") ? "background" as const : "strikethrough" as const
+  const diffStyle = (captionEditMode === "A" || captionEditMode === "B" || captionEditMode === "C" || captionEditMode === "D" || captionEditMode === "F" || captionEditMode === "H") ? "background" as const : "strikethrough" as const
   const internalCaptionEditMode =
-    (captionEditMode === "C" || captionEditMode === "D") ? "D" as const :
-    (captionEditMode === "E" || captionEditMode === "F") ? "A" as const :
-    captionEditMode === "G" ? "A" as const :
+    (captionEditMode === "E" || captionEditMode === "F") ? "D" as const :
+    (captionEditMode === "G" || captionEditMode === "H" || captionEditMode === "I") ? "A" as const :
     "D" as const
   const layoutVariant: "default" | "interleaved" | "grouped" =
-    captionEditMode === "A" ? "interleaved" :
-    captionEditMode === "B" ? "grouped" :
+    (captionEditMode === "A" || captionEditMode === "B" || captionEditMode === "D") ? "grouped" :
+    captionEditMode === "C" ? "interleaved" :
     "default"
+  const hideDesignSectionsA = isEditMode && (captionEditMode === "A" || captionEditMode === "B")
+  const syncAEdit = isEditMode && captionEditMode === "A"
+  const { registerLeft, registerRight } = usePairedHeights(syncAEdit)
+  const leftViewportRef = React.useRef<HTMLDivElement>(null)
+  const rightViewportRef = React.useRef<HTMLDivElement>(null)
+  useSyncedScroll(leftViewportRef, rightViewportRef, syncAEdit)
 
   // Caption design request collapse state (A안 토글 싱크)
   const [openCaptionRequests, setOpenCaptionRequests] = React.useState<Record<string, boolean>>({})
@@ -207,19 +214,21 @@ export function PlanningDetail({ id }: { id: string }) {
             </>
           ) : (
             <>
-              <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H")}>
+              <Select value={captionEditMode} onValueChange={(v) => setCaptionEditMode(v as "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J")}>
                 <SelectTrigger size="sm" className="w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="A">A안 (캡션별)</SelectItem>
-                  <SelectItem value="B">B안 (요청사항 하단)</SelectItem>
-                  <SelectItem value="C">C안 (직접편집·취소선)</SelectItem>
-                  <SelectItem value="D">D안 (직접편집·빨강/초록)</SelectItem>
-                  <SelectItem value="E">E안 (프리뷰·취소선)</SelectItem>
-                  <SelectItem value="F">F안 (프리뷰·빨강/초록)</SelectItem>
-                  <SelectItem value="G">G안 (상하수정)</SelectItem>
-                  <SelectItem value="H">H안 (폼수정)</SelectItem>
+                  <SelectItem value="A">A안</SelectItem>
+                  <SelectItem value="B">B안</SelectItem>
+                  <SelectItem value="C">C안</SelectItem>
+                  <SelectItem value="D">D안</SelectItem>
+                  <SelectItem value="E">E안</SelectItem>
+                  <SelectItem value="F">F안</SelectItem>
+                  <SelectItem value="G">G안</SelectItem>
+                  <SelectItem value="H">H안</SelectItem>
+                  <SelectItem value="I">I안</SelectItem>
+                  <SelectItem value="J">J안</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm" onClick={handleCancel}>
@@ -255,6 +264,9 @@ export function PlanningDetail({ id }: { id: string }) {
                     layoutVariant={layoutVariant}
                     openCaptionRequests={openCaptionRequests}
                     onToggleCaptionRequest={handleToggleCaptionRequest}
+                    hideDesignSections={hideDesignSectionsA}
+                    registerCardRef={syncAEdit ? registerLeft : undefined}
+                    viewportRef={syncAEdit ? leftViewportRef : undefined}
                     onImageClick={openImageViewer}
                   />
                 </div>
@@ -275,6 +287,9 @@ export function PlanningDetail({ id }: { id: string }) {
                     layoutVariant={layoutVariant}
                     openCaptionRequests={openCaptionRequests}
                     onToggleCaptionRequest={handleToggleCaptionRequest}
+                    hideDesignSections={hideDesignSectionsA}
+                    registerCardRef={syncAEdit ? registerRight : undefined}
+                    viewportRef={syncAEdit ? rightViewportRef : undefined}
                     onDataChange={setEditedData}
                     onImageClick={openImageViewer}
                   />
@@ -287,6 +302,7 @@ export function PlanningDetail({ id }: { id: string }) {
                 data={isEditMode ? editedData : planningData}
                 isEditMode={isEditMode}
                 captionEditMode={isEditMode ? internalCaptionEditMode : undefined}
+                layoutVariant="grouped"
                 onDataChange={setEditedData}
                 onImageClick={openImageViewer}
               />
@@ -329,6 +345,7 @@ export function PlanningDetail({ id }: { id: string }) {
               <PlanningContent
                 data={planningData}
                 isEditMode={false}
+                layoutVariant="grouped"
                 onImageClick={openImageViewer}
               />
             </div>
