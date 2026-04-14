@@ -160,11 +160,6 @@ export function FeedbackPanel({
             )}
           </h3>
         </div>
-        {pendingIds && (
-          <p className="text-xs text-muted-foreground mt-1">
-            작성한 피드백은 '수정완료' 시 빌더에게 전달됩니다.
-          </p>
-        )}
       </div>
 
       <ScrollArea className="flex-1 min-h-0 overflow-y">

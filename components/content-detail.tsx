@@ -46,11 +46,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { getContentDetailById, type ContentData } from "@/lib/mock-data"
 import { sprints, getContentFridayCutoff } from "@/lib/mock-data/contents"
@@ -79,7 +74,6 @@ export function ContentDetail({ id }: { id: string }) {
   const [revisionModalOpen, setRevisionModalOpen] = React.useState(false)
   const [cancelModalOpen, setCancelModalOpen] = React.useState(false)
   const [viewerOpen, setViewerOpen] = React.useState(false)
-  const [mobileFeedbackDrawerOpen, setMobileFeedbackDrawerOpen] = React.useState(false)
 
   const initialFeedbackRef = React.useRef(initialFeedback)
   const hasNewFeedback = feedback.length > initialFeedbackRef.current.length
@@ -114,17 +108,12 @@ export function ContentDetail({ id }: { id: string }) {
     setStatus("승인완료")
     setApproveModalOpen(false)
     setIsFeedbackMode(false)
-    setMobileFeedbackDrawerOpen(false)
     toast.success("콘텐츠가 승인되었습니다. 업로드가 진행됩니다.")
   }
 
   const handleEdit = () => {
-    if (isMobile) {
-      setMobileFeedbackDrawerOpen(true)
-    } else {
-      setIsFeedbackMode(true)
-      setTimeout(() => feedbackInputRef.current?.focus(), 300)
-    }
+    setIsFeedbackMode(true)
+    setTimeout(() => feedbackInputRef.current?.focus(), 300)
   }
 
   const handleCompleteEdit = () => {
@@ -136,7 +125,6 @@ export function ContentDetail({ id }: { id: string }) {
       setCancelModalOpen(true)
     } else {
       setIsFeedbackMode(false)
-      setMobileFeedbackDrawerOpen(false)
     }
   }
 
@@ -144,13 +132,11 @@ export function ContentDetail({ id }: { id: string }) {
     setCancelModalOpen(false)
     setFeedback(initialFeedback)
     setIsFeedbackMode(false)
-    setMobileFeedbackDrawerOpen(false)
   }
 
   const handleConfirmRevision = () => {
     setRevisionModalOpen(false)
     setIsFeedbackMode(false)
-    setMobileFeedbackDrawerOpen(false)
 
     const fridayCutoff = getContentFridayCutoff(sprint)
     const isBeforeFriday = fridayCutoff && todayStr <= fridayCutoff
@@ -454,43 +440,18 @@ export function ContentDetail({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* Mobile bottom action bar */}
-      <div className="md:hidden shrink-0 border-t border-border p-4 bg-background">
-        <div className="flex gap-2">
-          {isReadOnlyFeedback ? (
-            <Button variant="outline" size="sm" className="flex-1" onClick={() => setMobileFeedbackDrawerOpen(true)}>
-              피드백
-            </Button>
-          ) : (
-            <>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <span className="flex-1">
-                    <Button
-                      size="sm"
-                      className="w-full"
-                      disabled={hasNewFeedback}
-                      onClick={() => {
-                        if (!hasNewFeedback) setApproveModalOpen(true)
-                      }}
-                    >
-                      승인
-                    </Button>
-                  </span>
-                </PopoverTrigger>
-                {hasNewFeedback && (
-                  <PopoverContent className="w-auto max-w-[240px] p-3">
-                    <p className="text-sm">피드백이 작성되어 승인할 수 없습니다. 피드백을 완료해주세요.</p>
-                  </PopoverContent>
-                )}
-              </Popover>
-              <Button variant="outline" size="sm" className="flex-1" onClick={handleEdit}>
-                피드백
-              </Button>
-            </>
-          )}
+      {/* Mobile bottom action bar — 승인만 가능 (피드백/수정 불가) */}
+      {!isReadOnlyFeedback && (
+        <div className="md:hidden shrink-0 border-t border-border p-4 bg-background">
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={() => setApproveModalOpen(true)}
+          >
+            승인
+          </Button>
         </div>
-      </div>
+      )}
 
       {/* Approval Modal - Desktop */}
       {!isMobile && (
@@ -599,39 +560,6 @@ export function ContentDetail({ id }: { id: string }) {
           </DrawerContent>
         </Drawer>
       )}
-
-      {/* Mobile Feedback Drawer */}
-      <Drawer open={mobileFeedbackDrawerOpen} onOpenChange={setMobileFeedbackDrawerOpen}>
-        <DrawerContent className="h-[85vh]">
-          <DrawerHeader className="border-b border-border">
-            <DrawerTitle>피드백</DrawerTitle>
-          </DrawerHeader>
-          <div className="flex-1 overflow-hidden">
-            <FeedbackPanel
-              comments={feedback}
-              onAddComment={handleAddFeedback}
-              isReadOnly={isReadOnlyFeedback}
-              feedbackInputRef={feedbackInputRef}
-              pendingIds={isReadOnlyFeedback ? undefined : pendingIds}
-              wrapPending={!isReadOnlyFeedback}
-            />
-          </div>
-          <DrawerFooter className="border-t border-border">
-            {isReadOnlyFeedback ? (
-              <DrawerClose asChild>
-                <Button variant="outline" className="w-full">닫기</Button>
-              </DrawerClose>
-            ) : (
-              <div className="flex gap-2 w-full">
-                <Button variant="outline" className="flex-1" onClick={handleCancel}>
-                  취소
-                </Button>
-                <Button className="flex-1" disabled={feedback.length === 0} onClick={handleCompleteEdit}>피드백완료</Button>
-              </div>
-            )}
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
 
       {/* Fullscreen image viewer (card news only) */}
       {!isShortForm && (
